@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { query, queryOne } from '@/lib/db'
+import { pool, query, queryOne } from '@/lib/db'
 import { requireRole, apiError, apiSuccess } from '@/lib/auth'
 
 interface Params { params: Promise<{ id: string }> }
@@ -25,6 +25,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
+  const client = await pool.connect()
   try {
     const { id } = await params
     await requireRole('translator')
@@ -32,34 +33,42 @@ export async function POST(req: NextRequest, { params }: Params) {
     const { number, title, pages, is_premium } = await req.json()
     if (!number) return apiError('Bob raqami kiritilishi shart')
 
-    const [chapter] = await query<{ id: string }>(
+    await client.query('BEGIN')
+
+    const chapterRes = await client.query<{ id: string }>(
       `INSERT INTO chapters (manga_id, number, title, is_premium)
        VALUES ($1,$2,$3,$4)
        ON CONFLICT (manga_id, number) DO UPDATE SET title=EXCLUDED.title, is_premium=EXCLUDED.is_premium
        RETURNING id`,
       [id, number, title ?? `Bob ${number}`, is_premium ?? false]
     )
+    const chapter = chapterRes.rows[0]
 
     if (pages?.length) {
-      await queryOne(`DELETE FROM chapter_pages WHERE chapter_id = $1`, [chapter.id])
+      await client.query(`DELETE FROM chapter_pages WHERE chapter_id = $1`, [chapter.id])
       for (let i = 0; i < pages.length; i++) {
-        await queryOne(
+        await client.query(
           'INSERT INTO chapter_pages (chapter_id, page_number, image_url) VALUES ($1,$2,$3)',
           [chapter.id, i + 1, pages[i]]
         )
       }
     }
 
-    await queryOne(
+    await client.query(
       'UPDATE manga SET chapters_count = (SELECT COUNT(*) FROM chapters WHERE manga_id=$1), updated_at=NOW() WHERE id=$1',
       [id]
     )
 
+    await client.query('COMMIT')
+
     return apiSuccess({ id: chapter.id, message: 'Bob qo\'shildi' }, 201)
   } catch (err: unknown) {
+    await client.query('ROLLBACK')
     if (err instanceof Error && err.message === 'Unauthorized') return apiError('Avtorizatsiya talab qilinadi', 401)
     if (err instanceof Error && err.message === 'Forbidden') return apiError('Ruxsat yo\'q', 403)
     console.error(err)
     return apiError('Server xatosi', 500)
+  } finally {
+    client.release()
   }
 }
