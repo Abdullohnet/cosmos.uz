@@ -8,7 +8,7 @@ import {
   TrendingUp, Crown, Settings, LogOut, Gift, Sparkles,
   ChevronDown, Flame, Star, Clock, Upload
 } from 'lucide-react'
-import { useUserStore, mockUser } from '@/lib/store'
+import { useUserStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -29,6 +29,7 @@ export function Navbar() {
   }, [])
 
   const handleDemoLogin = () => {
+    const { mockUser } = require('@/lib/store')
     login(mockUser)
   }
 

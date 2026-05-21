@@ -7,7 +7,7 @@ import {
   Shield, AlertTriangle, ChevronRight, ArrowUpRight, ArrowDownRight,
   Settings, MessageSquare, BarChart3, Home, UserCheck, UserX,
   Megaphone, Calendar, Flag, Ban, Eye, Check, X, Search,
-  Crown, Percent, Gift, Flame, FileText, Plus
+  Crown, Percent, Gift, Flame, FileText
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { ParticlesBackground } from '@/components/particles'
@@ -500,3 +500,22 @@ export default function AdminPanel() {
   )
 }
 
+function Plus(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+    </svg>
+  )
+}
