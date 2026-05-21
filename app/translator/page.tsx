@@ -142,7 +142,7 @@ export default function TranslatorDashboard() {
       canvas.width = viewport.width
       canvas.height = viewport.height
       const ctx = canvas.getContext('2d')!
-      await page.render({ canvasContext: ctx, viewport }).promise
+      await page.render({ canvasContext: ctx, canvas, viewport } as any).promise
       images.push(canvas.toDataURL('image/jpeg', 0.85))
       onProgress(Math.round((i / totalPages) * 80))
     }
@@ -153,7 +153,7 @@ export default function TranslatorDashboard() {
     const mangaId = selectedMangaId || myMangas.find(m => m.title === chapterForm.manga)?.id
     if (!mangaId) { setChapterError('Manga tanlanishi shart'); return }
     if (!chapterForm.number) { setChapterError('Bob raqami kiritilishi shart'); return }
-    if (uploadMode === 'pdf' && !pdfFile && uploadMode === 'images' && imageFiles.length === 0) {
+    if ((uploadMode === 'pdf' && !pdfFile) || (uploadMode === 'images' && imageFiles.length === 0)) {
       setChapterError('Fayl yuklanishi shart'); return
     }
     setChapterError('')
@@ -288,8 +288,8 @@ export default function TranslatorDashboard() {
                             <div className="flex items-center gap-2">
                               <h3 className="text-sm font-medium truncate">{manga.title}</h3>
                               <span className={cn('px-1.5 py-0.5 rounded-full text-[9px] font-medium flex-shrink-0',
-                                manga.status === 'active' ? 'bg-success/20 text-success' : 'bg-yellow-500/20 text-yellow-400')}>
-                                {manga.status === 'active' ? 'Faol' : 'To\'xtatilgan'}
+                                manga.status === 'ongoing' ? 'bg-success/20 text-success' : 'bg-yellow-500/20 text-yellow-400')}>
+                                {manga.status === 'ongoing' ? 'Faol' : 'To\'xtatilgan'}
                               </span>
                             </div>
                             <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
@@ -396,8 +396,8 @@ export default function TranslatorDashboard() {
                           <h3 className="font-bold text-sm">{manga.title}</h3>
                         </div>
                         <span className={cn('absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-medium',
-                          manga.status === 'active' ? 'bg-success/90 text-white' : 'bg-yellow-500/90 text-white')}>
-                          {manga.status === 'active' ? 'Faol' : 'To\'xtatilgan'}
+                          manga.status === 'ongoing' ? 'bg-success/90 text-white' : 'bg-yellow-500/90 text-white')}>
+                          {manga.status === 'ongoing' ? 'Faol' : 'To\'xtatilgan'}
                         </span>
                       </div>
                       <div className="p-3">

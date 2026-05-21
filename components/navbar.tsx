@@ -170,7 +170,7 @@ export function Navbar() {
                             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2 px-1">
                               Trendda
                             </p>
-                            {mockMangas.filter(m => m.isHot).slice(0, 3).map(m => (
+                            {searchResults.slice(0, 3).map(m => (
                               <Link key={m.id} href={`/manga/${m.id}`} onClick={() => setIsSearchFocused(false)}>
                                 <motion.div whileHover={{ x: 4 }}
                                   className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-secondary/50 transition-colors">

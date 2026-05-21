@@ -15,7 +15,7 @@ interface HeroSliderProps {
 export function HeroSlider({ mangas }: HeroSliderProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [direction, setDirection] = useState(0)
-  const intervalRef = useRef<NodeJS.Timeout>()
+  const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const featuredMangas = mangas.slice(0, 5)
 

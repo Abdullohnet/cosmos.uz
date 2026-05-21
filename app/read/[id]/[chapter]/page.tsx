@@ -394,7 +394,7 @@ export default function ReaderPage() {
                   <motion.button
                     onClick={() => goToChapter(chapterNumber + 1)}
                     className="w-full py-4 bg-gradient-to-r from-primary via-accent to-indigo-500 text-white font-bold text-base flex items-center justify-center gap-3 relative overflow-hidden"
-                    whileHover={{ brightness: 1.1 }}
+                    whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
                   >
                     {/* Shimmer effect */}
