@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import {
@@ -13,7 +13,9 @@ import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
 import { ParticlesBackground, FloatingOrbs } from '@/components/particles'
 import { Button } from '@/components/ui/button'
-import { useUserStore, useMangaStore, mockMangas } from '@/lib/store'
+import { useUserStore, useMangaStore } from '@/lib/store'
+import type { Manga } from '@/lib/store'
+import { apiGetBookmarks, apiGetMangas } from '@/lib/api'
 import { MangaCard } from '@/components/manga-card'
 import { cn } from '@/lib/utils'
 
@@ -38,10 +40,23 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const { user, isAuthenticated } = useUserStore()
   const { favorites } = useMangaStore()
+  const [libraryMangas, setLibraryMangas] = useState<Manga[]>([])
+  const [favoriteMangas, setFavoriteMangas] = useState<Manga[]>([])
+  const [recentlyRead, setRecentlyRead] = useState<Manga[]>([])
 
-  const libraryMangas = mockMangas.slice(0, 6)
-  const favoriteMangas = mockMangas.filter(m => favorites.includes(m.id))
-  const recentlyRead = mockMangas.slice(0, 4)
+  useEffect(() => {
+    apiGetMangas({ limit: 8, sort: 'views' }).then(({ manga }) => {
+      setLibraryMangas(manga.slice(0, 6))
+      setRecentlyRead(manga.slice(0, 4))
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!user) return
+    apiGetBookmarks(user.id).then(bookmarks => {
+      if (bookmarks.length > 0) setFavoriteMangas(bookmarks)
+    }).catch(() => {})
+  }, [user?.id])
 
   const formatTime = (minutes: number) => {
     const hours = Math.floor(minutes / 60)

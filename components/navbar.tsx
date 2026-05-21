@@ -11,7 +11,9 @@ import {
   Sun, Moon
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import { useUserStore, useUIStore, mockMangas } from '@/lib/store'
+import { useUserStore, useUIStore } from '@/lib/store'
+import type { Manga } from '@/lib/store'
+import { apiSearchManga } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -30,16 +32,18 @@ export function Navbar() {
   const { bannerVisible } = useUIStore()
   const { theme, setTheme } = useTheme()
 
+  const [searchResults, setSearchResults] = useState<Manga[]>([])
+
   useEffect(() => { setMounted(true) }, [])
   const unreadCount = notifications.filter(n => !n.read).length
 
-  // Live search results
-  const searchResults = searchQuery.length > 1
-    ? mockMangas.filter(m =>
-        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.author.toLowerCase().includes(searchQuery.toLowerCase())
-      ).slice(0, 6)
-    : []
+  useEffect(() => {
+    if (searchQuery.length < 2) { setSearchResults([]); return }
+    const t = setTimeout(() => {
+      apiSearchManga(searchQuery, 6).then(setSearchResults).catch(() => {})
+    }, 300)
+    return () => clearTimeout(t)
+  }, [searchQuery])
 
   const recentSearches = ['Solo Leveling', 'One Piece', 'Naruto']
 

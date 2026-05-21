@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
@@ -14,7 +14,8 @@ import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
 import { ParticlesBackground } from '@/components/particles'
 import { MangaCard } from '@/components/manga-card'
-import { mockMangas, useMangaStore, useUserStore } from '@/lib/store'
+import { useMangaStore, useUserStore } from '@/lib/store'
+import { apiGetManga, apiGetMangas, apiToggleBookmark } from '@/lib/api'
 import { useToast } from '@/components/toast'
 import { cn } from '@/lib/utils'
 
@@ -27,32 +28,76 @@ export default function MangaDetailPage() {
   const { show } = useToast()
 
   const { addToFavorites, removeFromFavorites, favorites } = useMangaStore()
-  const { isAuthenticated } = useUserStore()
+  const { isAuthenticated, user } = useUserStore()
 
-  const manga = mockMangas.find(m => m.id === params.id) || mockMangas[0]
-  const isFav = favorites.includes(manga.id)
+  const [manga, setManga] = useState<import('@/lib/store').Manga | null>(null)
+  const [chapters, setChapters] = useState<any[]>([])
+  const [relatedManga, setRelatedManga] = useState<import('@/lib/store').Manga[]>([])
+  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  const chapters = Array.from({ length: Math.min(manga.chapters, 50) }, (_, i) => ({
-    id: `ch-${i + 1}`,
-    number: manga.chapters - i,
-    title: `${manga.chapters - i}-bob`,
-    isPremium: i < 3,
-    price: i < 3 ? 10 : 0,
-    publishedAt: new Date(Date.now() - i * 86400000 * 3).toLocaleDateString('uz-UZ'),
-    views: Math.floor(Math.random() * 100000) + 10000,
-  }))
+  useEffect(() => {
+    if (!params.id) return
+    const id = params.id as string
+    Promise.all([
+      apiGetManga(id),
+      apiGetMangas({ limit: 7, sort: 'views' }),
+    ]).then(([detail, list]) => {
+      setManga(detail.manga)
+      setIsBookmarked(detail.isBookmarked)
+      if (detail.userRating) setUserRating(detail.userRating)
+      const apiChapters = (detail.chapters as any[]).length > 0
+        ? (detail.chapters as any[]).map((ch: any, i: number) => ({
+            id: ch.id,
+            number: ch.chapter_number,
+            title: ch.title || `${ch.chapter_number}-bob`,
+            isPremium: ch.is_premium,
+            price: ch.price || 0,
+            publishedAt: new Date(ch.created_at).toLocaleDateString('uz-UZ'),
+            views: ch.views || 0,
+          }))
+        : Array.from({ length: Math.min(detail.manga.chapters, 50) }, (_, i) => ({
+            id: `ch-${i+1}`, number: detail.manga.chapters - i,
+            title: `${detail.manga.chapters - i}-bob`, isPremium: i < 3,
+            price: i < 3 ? 10 : 0,
+            publishedAt: new Date(Date.now() - i * 86400000 * 3).toLocaleDateString('uz-UZ'),
+            views: 10000,
+          }))
+      setChapters(apiChapters)
+      setRelatedManga(list.manga.filter(m => m.id !== id).slice(0, 6))
+    }).catch(() => {}).finally(() => setLoading(false))
+  }, [params.id])
 
-  const relatedManga = mockMangas.filter(m => m.id !== manga.id).slice(0, 6)
+  const isFav = manga ? (isBookmarked || favorites.includes(manga.id)) : false
+
+  if (loading || !manga) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">Yuklanmoqda...</p>
+        </div>
+      </div>
+    )
+  }
 
   const fmt = (n: number) => n >= 1000000 ? `${(n / 1000000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toString()
 
-  const handleFavorite = () => {
-    if (isFav) {
-      removeFromFavorites(manga.id)
-      show('Sevimlilardan olib tashlandi', 'info')
-    } else {
+  const handleFavorite = async () => {
+    if (!user) { show('Saqlash uchun kiring', 'info'); return }
+    try {
+      const res = await apiToggleBookmark(user.id, manga.id)
+      setIsBookmarked(res.bookmarked)
+      if (res.bookmarked) {
+        addToFavorites(manga.id)
+        show(`${manga.title} sevimlilarga qo'shildi! ❤️`, 'success')
+      } else {
+        removeFromFavorites(manga.id)
+        show('Sevimlilardan olib tashlandi', 'info')
+      }
+    } catch {
       addToFavorites(manga.id)
-      show(`${manga.title} sevimlilarga qo'shildi! ❤️`, 'success')
+      show(`${manga.title} saqlandi! ❤️`, 'success')
     }
   }
 

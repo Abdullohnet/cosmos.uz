@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Bell, BookOpen, Gift, Star, Sparkles, Check, 
@@ -10,6 +10,8 @@ import { Navbar } from '@/components/navbar'
 import { ParticlesBackground } from '@/components/particles'
 import { Button } from '@/components/ui/button'
 import { useUserStore } from '@/lib/store'
+import type { Notification } from '@/lib/store'
+import { apiGetNotifications, apiMarkNotificationsRead } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -21,20 +23,20 @@ const notifIcons = {
   social: { icon: Users, color: 'bg-accent/20 text-accent' },
 }
 
-const mockExtraNotifs = [
-  { id: '10', type: 'social' as const, title: 'Yangi obunachi', message: 'MangaKing sizga obuna bo\'ldi', read: true, createdAt: new Date(Date.now() - 3600000 * 5).toISOString() },
-  { id: '11', type: 'chapter' as const, title: 'Yangi bob', message: 'Tower of God 581-bob chiqdi!', read: true, createdAt: new Date(Date.now() - 3600000 * 8).toISOString() },
-  { id: '12', type: 'achievement' as const, title: 'Yutuq ochildi!', message: '"Kitobxon" badji sizga berildi', read: true, createdAt: new Date(Date.now() - 3600000 * 24).toISOString() },
-  { id: '13', type: 'reward' as const, title: 'Kunlik mukofot', message: 'Tizimga kirginingiz uchun +10 olmoz', read: true, createdAt: new Date(Date.now() - 3600000 * 26).toISOString() },
-  { id: '14', type: 'system' as const, title: 'Platforma yangilandi', message: 'Yangi o\'quvchi rejimi qo\'shildi', read: true, createdAt: new Date(Date.now() - 3600000 * 48).toISOString() },
-]
-
 export default function NotificationsPage() {
-  const { notifications, markNotificationRead, markAllNotificationsRead } = useUserStore()
+  const { notifications: storeNotifs, markNotificationRead, markAllNotificationsRead } = useUserStore()
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
   const [localDeleted, setLocalDeleted] = useState<string[]>([])
+  const [apiNotifs, setApiNotifs] = useState<Notification[]>([])
 
-  const allNotifs = [...notifications, ...mockExtraNotifs]
+  useEffect(() => {
+    apiGetNotifications()
+      .then(({ notifications }) => { if (notifications.length > 0) setApiNotifs(notifications) })
+      .catch(() => {})
+  }, [])
+
+  const base = apiNotifs.length > 0 ? apiNotifs : storeNotifs
+  const allNotifs = base
     .filter(n => !localDeleted.includes(n.id))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
@@ -81,7 +83,7 @@ export default function NotificationsPage() {
               </div>
             </div>
             {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={markAllNotificationsRead} className="text-xs">
+              <Button variant="ghost" size="sm" onClick={() => { markAllNotificationsRead(); apiMarkNotificationsRead().catch(() => {}) }} className="text-xs">
                 <Check className="w-3.5 h-3.5 mr-1" />
                 Hammasini o&apos;qish
               </Button>
@@ -139,7 +141,7 @@ export default function NotificationsPage() {
                         'glass rounded-xl p-4 flex items-start gap-4 group cursor-pointer transition-colors hover:bg-secondary/30',
                         !notif.read && 'ring-1 ring-primary/20 bg-primary/5'
                       )}
-                      onClick={() => markNotificationRead(notif.id)}
+                      onClick={() => { markNotificationRead(notif.id); apiMarkNotificationsRead(notif.id).catch(() => {}) }}
                     >
                       <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', config.color)}>
                         <Icon className="w-5 h-5" />

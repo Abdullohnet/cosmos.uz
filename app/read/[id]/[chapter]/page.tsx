@@ -11,7 +11,9 @@ import {
   BookOpen, ChevronDown, Play, Sparkles, Check
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { mockMangas, useUIStore, useMangaStore, useUserStore } from '@/lib/store'
+import { useUIStore, useMangaStore, useUserStore } from '@/lib/store'
+import type { Manga } from '@/lib/store'
+import { apiGetManga } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 export default function ReaderPage() {
@@ -31,15 +33,22 @@ export default function ReaderPage() {
   const { updateProgress } = useMangaStore()
   const { gainXP, isAuthenticated } = useUserStore()
 
-  const manga = mockMangas.find(m => m.id === params.id) || mockMangas[0]
+  const [manga, setManga] = useState<Manga | null>(null)
   const chapterNumber = parseInt(params.chapter as string) || 1
+
+  useEffect(() => {
+    if (!params.id) return
+    apiGetManga(params.id as string)
+      .then(({ manga }) => setManga(manga))
+      .catch(() => {})
+  }, [params.id])
 
   const pages = Array.from({ length: 20 }, (_, i) => ({
     id: i + 1,
     url: `https://images.unsplash.com/photo-${1612178537253 + i * 1000}-bccd437b730e?w=800&h=1200&fit=crop`,
   }))
 
-  const totalChapters = manga.chapters
+  const totalChapters = manga?.chapters ?? 999
   const hasPrevChapter = chapterNumber > 1
   const hasNextChapter = chapterNumber < totalChapters
 
@@ -72,9 +81,10 @@ export default function ReaderPage() {
   }, [readerMode, pages.length])
 
   useEffect(() => {
+    if (!manga) return
     updateProgress(manga.id, chapterNumber)
     if (isAuthenticated) gainXP(5)
-  }, [chapterNumber, manga.id, updateProgress, gainXP, isAuthenticated])
+  }, [chapterNumber, manga?.id, updateProgress, gainXP, isAuthenticated])
 
   useEffect(() => {
     let timeout: NodeJS.Timeout
@@ -98,6 +108,7 @@ export default function ReaderPage() {
   }, [])
 
   const goToChapter = (chapter: number) => {
+    if (!manga) return
     router.push(`/read/${manga.id}/${chapter}`)
     setShowChapterList(false)
     window.scrollTo({ top: 0 })
@@ -107,6 +118,14 @@ export default function ReaderPage() {
     default: 'bg-background',
     sepia: 'bg-amber-50 dark:bg-amber-950',
     night: 'bg-zinc-950',
+  }
+
+  if (!manga) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    )
   }
 
   return (

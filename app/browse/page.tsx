@@ -1,17 +1,19 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Search, SlidersHorizontal, Grid3X3, List, X, ChevronDown,
-  BookOpen, Star, Eye, Flame, Sparkles, TrendingUp, Filter
+  BookOpen, Star, Eye, Flame, Sparkles, TrendingUp, Filter, Loader2
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
 import { ParticlesBackground } from '@/components/particles'
 import { MangaCard } from '@/components/manga-card'
 import { Button } from '@/components/ui/button'
-import { mockMangas, genres } from '@/lib/store'
+import { genres } from '@/lib/store'
+import type { Manga } from '@/lib/store'
+import { apiGetMangas } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const types = ['Barchasi', 'Manga', 'Manhwa', 'Manhua']
@@ -32,6 +34,15 @@ export default function BrowsePage() {
   const [sortBy, setSortBy] = useState('popular')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showFilters, setShowFilters] = useState(false)
+  const [allMangas, setAllMangas] = useState<Manga[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    apiGetMangas({ limit: 100, sort: 'views' })
+      .then(({ manga }) => { if (manga.length > 0) setAllMangas(manga) })
+      .catch(() => {})
+      .finally(() => setIsLoading(false))
+  }, [])
 
   const toggleGenre = (genre: string) => {
     setSelectedGenres(prev =>
@@ -48,7 +59,7 @@ export default function BrowsePage() {
   }
 
   const filtered = useMemo(() => {
-    let result = [...mockMangas]
+    let result = [...allMangas]
 
     if (search) {
       result = result.filter(m =>
@@ -80,7 +91,7 @@ export default function BrowsePage() {
     }
 
     return result
-  }, [search, selectedGenres, selectedType, selectedStatus, sortBy])
+  }, [allMangas, search, selectedGenres, selectedType, selectedStatus, sortBy])
 
   const activeFilterCount = selectedGenres.length +
     (selectedType !== 'Barchasi' ? 1 : 0) +
@@ -277,7 +288,10 @@ export default function BrowsePage() {
           {/* Results count */}
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-muted-foreground">
-              <span className="text-foreground font-medium">{filtered.length}</span> ta natija topildi
+              {isLoading
+                ? <span className="flex items-center gap-1"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Yuklanmoqda...</span>
+                : <><span className="text-foreground font-medium">{filtered.length}</span> ta natija topildi</>
+              }
             </p>
           </div>
 

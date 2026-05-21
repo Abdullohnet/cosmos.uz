@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users, BookOpen, Diamond, TrendingUp, DollarSign,
@@ -18,6 +18,7 @@ import { ParticlesBackground } from '@/components/particles'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { TranslatorApplication, Discount } from '@/lib/store'
+import { apiGetAdminStats } from '@/lib/api'
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -127,12 +128,21 @@ export default function AdminPanel() {
     diamondPrice: 100, platformCut: 20, translatorCut: 80, minWithdraw: 100000,
     dailyLoginReward: 10, referralBonus: 50,
   })
+  const [apiStats, setApiStats] = useState<any>(null)
+
+  useEffect(() => {
+    apiGetAdminStats().then(data => { if (data) setApiStats(data) }).catch(() => {})
+  }, [])
 
   const stats = {
-    totalUsers: 125000, newUsersToday: 342, activeUsers: 18500,
-    totalViews: 15000000, todayViews: 125000,
-    totalRevenue: 850000000, todayRevenue: 12500000,
-    totalDiamondsSold: 2500000,
+    totalUsers: apiStats?.total_users ?? 125000,
+    newUsersToday: apiStats?.new_users_today ?? 342,
+    activeUsers: apiStats?.active_users ?? 18500,
+    totalViews: apiStats?.total_views ?? 15000000,
+    todayViews: apiStats?.today_views ?? 125000,
+    totalRevenue: apiStats?.total_revenue ?? 850000000,
+    todayRevenue: apiStats?.today_revenue ?? 12500000,
+    totalDiamondsSold: apiStats?.total_diamonds_sold ?? 2500000,
     pendingApplications: applications.filter(a => a.status === 'pending').length
   }
 

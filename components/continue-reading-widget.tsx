@@ -4,30 +4,37 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { BookOpen, X, ChevronRight, Play } from 'lucide-react'
-import { useMangaStore, mockMangas } from '@/lib/store'
+import { useMangaStore } from '@/lib/store'
+import type { Manga } from '@/lib/store'
+import { apiGetManga } from '@/lib/api'
 import { usePathname } from 'next/navigation'
 
 export function ContinueReadingWidget() {
   const [dismissed, setDismissed] = useState(false)
   const [visible, setVisible] = useState(false)
+  const [manga, setManga] = useState<Manga | null>(null)
   const { readingHistory, readingProgress } = useMangaStore()
   const pathname = usePathname()
 
-  // Hide on reader, login, apply pages
   const hideOn = ['/read/', '/login', '/apply']
   const shouldHide = hideOn.some(p => pathname.includes(p))
 
+  const lastRead = readingHistory[0]
+
   useEffect(() => {
-    if (shouldHide || readingHistory.length === 0 || dismissed) return
+    if (shouldHide || !lastRead || dismissed) return
+    apiGetManga(lastRead.mangaId)
+      .then(({ manga }) => setManga(manga))
+      .catch(() => {})
+  }, [shouldHide, lastRead?.mangaId, dismissed])
+
+  useEffect(() => {
+    if (shouldHide || !manga || dismissed) return
     const timer = setTimeout(() => setVisible(true), 2000)
     return () => clearTimeout(timer)
-  }, [shouldHide, readingHistory.length, dismissed])
+  }, [shouldHide, manga, dismissed])
 
-  if (shouldHide || readingHistory.length === 0 || dismissed) return null
-
-  const lastRead = readingHistory[0]
-  const manga = mockMangas.find(m => m.id === lastRead.mangaId)
-  if (!manga) return null
+  if (shouldHide || !manga || dismissed) return null
 
   const progress = readingProgress[manga.id] || 1
   const progressPercent = Math.min(Math.round((progress / manga.chapters) * 100), 100)

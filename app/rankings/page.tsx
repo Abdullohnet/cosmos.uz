@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   TrendingUp, Star, Eye, Flame, Crown, Trophy,
@@ -11,9 +11,10 @@ import { Footer } from '@/components/footer'
 import { ParticlesBackground, FloatingOrbs } from '@/components/particles'
 import { MangaCard } from '@/components/manga-card'
 import { Button } from '@/components/ui/button'
-import { mockMangas } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import type { Manga } from '@/lib/store'
+import { apiGetMangas } from '@/lib/api'
 
 const periods = [
   { id: 'daily', label: 'Bugun', icon: Flame },
@@ -50,8 +51,17 @@ export default function RankingsPage() {
   const [period, setPeriod] = useState('weekly')
   const [category, setCategory] = useState('manhwa')
   const [activeTab, setActiveTab] = useState<'manga' | 'readers' | 'translators'>('manga')
+  const [mangas, setMangas] = useState<Manga[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const sortedMangas = [...mockMangas].sort((a, b) => b.views - a.views)
+  useEffect(() => {
+    apiGetMangas({ limit: 50, sort: 'views' })
+      .then(({ manga }) => { if (manga.length > 0) setMangas(manga) })
+      .catch(() => {})
+      .finally(() => setIsLoading(false))
+  }, [])
+
+  const sortedMangas = [...mangas].sort((a, b) => b.views - a.views)
 
   const formatNumber = (n: number) => {
     if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`

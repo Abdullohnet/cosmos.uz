@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import {
@@ -15,14 +15,10 @@ import { Navbar } from '@/components/navbar'
 import { ParticlesBackground } from '@/components/particles'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { apiGetTranslatorMangas, apiGetTranslatorEarnings } from '@/lib/api'
+import type { Manga } from '@/lib/store'
 
 type TabId = 'overview' | 'manga' | 'chapters' | 'earnings' | 'promote'
-
-const myMangas = [
-  { id: 1, title: 'Solo Leveling', cover: 'https://images.unsplash.com/photo-1612178537253-bccd437b730e?w=200&h=300&fit=crop', chapters: 179, views: 450000, earnings: 850000, status: 'active' },
-  { id: 2, title: 'Tower of God', cover: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=200&h=300&fit=crop', chapters: 520, views: 380000, earnings: 720000, status: 'active' },
-  { id: 3, title: 'The Beginning After The End', cover: 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=200&h=300&fit=crop', chapters: 156, views: 220000, earnings: 450000, status: 'paused' },
-]
 
 const recentChapters = [
   { id: 1, manga: 'Solo Leveling', chapter: 179, views: 12500, earnings: 25000, status: 'published', date: '2 soat oldin', isPaid: false },
@@ -48,7 +44,22 @@ export default function TranslatorDashboard() {
   const pdfRef = useRef<HTMLInputElement>(null)
   const imgRef = useRef<HTMLInputElement>(null)
 
-  const stats = { totalManga: 12, totalChapters: 245, totalViews: 1250000, todayViews: 15420, totalEarnings: 2500000, todayEarnings: 125000, diamonds: 8500, followers: 12500 }
+  const [myMangas, setMyMangas] = useState<Manga[]>([])
+  const [apiStats, setApiStats] = useState<any>(null)
+
+  useEffect(() => {
+    apiGetTranslatorMangas().then(({ mangas, stats }) => {
+      if (mangas.length > 0) setMyMangas(mangas)
+      if (stats) setApiStats(stats)
+    }).catch(() => {})
+  }, [])
+
+  const stats = {
+    totalManga: apiStats?.manga_count ?? myMangas.length || 3,
+    totalChapters: myMangas.reduce((s, m) => s + m.chapters, 0) || 245,
+    totalViews: apiStats?.total_views ?? myMangas.reduce((s, m) => s + m.views, 0) || 1250000,
+    todayViews: 15420, totalEarnings: 2500000, todayEarnings: 125000, diamonds: 8500, followers: 12500
+  }
   const fmt = (n: number) => n >= 1000000 ? `${(n/1000000).toFixed(1)}M` : n >= 1000 ? `${(n/1000).toFixed(1)}K` : n.toString()
   const fmtMoney = (n: number) => `${(n/1000).toFixed(0)}K so'm`
 

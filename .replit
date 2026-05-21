@@ -32,3 +32,9 @@ waitForPort = 5000
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+SUPABASE_URL = "postgresql://postgres:MangaUz2026@db.kvopxixwahvsqylqadts.supabase.co:5432/postgres"
+JWT_SECRET = "MangaUz2026"
