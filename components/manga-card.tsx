@@ -252,10 +252,17 @@ export function MangaCard({ manga, variant = 'default', rank, showRank = false }
     <Link href={`/manga/${manga.id}`}>
       <motion.div
         className="relative group rounded-lg overflow-hidden cursor-pointer"
-        whileHover={{ scale: 1.03, y: -2 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        whileHover={{ scale: 1.04, y: -4 }}
+        whileTap={{ scale: 0.97 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 22 }}
+        style={{ transformOrigin: 'bottom center' }}
       >
+        {/* Card glow on hover */}
+        <motion.div
+          className="absolute -inset-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10"
+          style={{ background: 'linear-gradient(135deg, oklch(0.7 0.2 280 / 0.3), oklch(0.65 0.25 260 / 0.3))', filter: 'blur(4px)' }}
+        />
+
         {/* Cover */}
         <div className="relative aspect-[3/4] rounded-lg overflow-hidden">
           <img

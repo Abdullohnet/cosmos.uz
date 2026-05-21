@@ -33,9 +33,9 @@ export function Navbar() {
   }
 
   const navLinks = [
-    { href: '/', label: 'Home', icon: Home },
-    { href: '/browse', label: 'Browse', icon: BookOpen },
-    { href: '/rankings', label: 'Rankings', icon: TrendingUp },
+    { href: '/', label: 'Bosh sahifa', icon: Home },
+    { href: '/browse', label: 'Ko\'rish', icon: BookOpen },
+    { href: '/rankings', label: 'Reyting', icon: TrendingUp },
     { href: '/premium', label: 'Premium', icon: Crown },
   ]
 
@@ -112,7 +112,7 @@ export function Navbar() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
                     type="text"
-                    placeholder="Search manga, authors, genres..."
+                    placeholder="Manga, muallif, janr qidirish..."
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-secondary/50 border border-border/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                     onFocus={() => setIsSearchOpen(true)}
                     onBlur={() => setIsSearchOpen(false)}
@@ -191,13 +191,13 @@ export function Navbar() {
                             className="absolute right-0 top-full mt-2 w-80 rounded-xl glass-strong border border-border/50 shadow-xl overflow-hidden z-50"
                           >
                             <div className="p-4 border-b border-border/50 flex items-center justify-between">
-                              <h3 className="font-semibold">Notifications</h3>
+                              <h3 className="font-semibold">Bildirishnomalar</h3>
                               {unreadCount > 0 && (
                                 <button
                                   onClick={markAllNotificationsRead}
                                   className="text-xs text-primary hover:underline"
                                 >
-                                  Mark all read
+                                  Barchasini o&apos;qilgan deb belgilash
                                 </button>
                               )}
                             </div>
@@ -238,7 +238,7 @@ export function Navbar() {
                             </div>
                             <Link href="/notifications">
                               <div className="p-3 text-center text-sm text-primary hover:bg-secondary/30 transition-colors">
-                                View all notifications
+                                Barcha bildirishnomalar
                               </div>
                             </Link>
                           </motion.div>
@@ -316,7 +316,7 @@ export function Navbar() {
                                   whileHover={{ x: 4 }}
                                 >
                                   <User className="w-4 h-4 text-muted-foreground" />
-                                  <span className="text-sm">My Profile</span>
+                                  <span className="text-sm">Mening profilim</span>
                                 </motion.div>
                               </Link>
                               <Link href="/shop" onClick={() => setIsProfileOpen(false)}>
@@ -325,7 +325,7 @@ export function Navbar() {
                                   whileHover={{ x: 4 }}
                                 >
                                   <Diamond className="w-4 h-4 text-yellow-400" />
-                                  <span className="text-sm">Diamond Shop</span>
+                                  <span className="text-sm">Olmos do&apos;koni</span>
                                   <span className="ml-auto text-xs text-yellow-400 font-medium">{user.diamonds}</span>
                                 </motion.div>
                               </Link>
@@ -336,7 +336,7 @@ export function Navbar() {
                                     whileHover={{ x: 4 }}
                                   >
                                     <Upload className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm">Translator Dashboard</span>
+                                    <span className="text-sm">Tarjimon paneli</span>
                                   </motion.div>
                                 </Link>
                               )}
@@ -347,7 +347,7 @@ export function Navbar() {
                                     whileHover={{ x: 4 }}
                                   >
                                     <Settings className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm">Admin Panel</span>
+                                    <span className="text-sm">Admin panel</span>
                                   </motion.div>
                                 </Link>
                               )}
@@ -357,7 +357,7 @@ export function Navbar() {
                                   whileHover={{ x: 4 }}
                                 >
                                   <Settings className="w-4 h-4 text-muted-foreground" />
-                                  <span className="text-sm">Settings</span>
+                                  <span className="text-sm">Sozlamalar</span>
                                 </motion.div>
                               </Link>
                               <div className="my-2 border-t border-border/50" />
@@ -370,7 +370,7 @@ export function Navbar() {
                                 whileHover={{ x: 4 }}
                               >
                                 <LogOut className="w-4 h-4" />
-                                <span className="text-sm">Log Out</span>
+                                <span className="text-sm">Chiqish</span>
                               </motion.button>
                             </div>
                           </motion.div>
@@ -387,14 +387,14 @@ export function Navbar() {
                     onClick={handleDemoLogin}
                     className="text-muted-foreground hover:text-foreground"
                   >
-                    Log In
+                    Kirish
                   </Button>
                   <Button
                     size="sm"
                     className="bg-gradient-to-r from-primary to-accent text-primary-foreground glow-primary"
                     onClick={handleDemoLogin}
                   >
-                    Sign Up
+                    Ro&apos;yxatdan o&apos;tish
                   </Button>
                 </div>
               )}
@@ -431,7 +431,7 @@ export function Navbar() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
                     type="text"
-                    placeholder="Search manga..."
+                    placeholder="Manga qidirish..."
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-secondary/50 border border-border/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                   />
                 </div>
@@ -501,7 +501,7 @@ export function Navbar() {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Search manga, authors, genres..."
+                  placeholder="Manga, muallif, janr qidirish..."
                   className="w-full pl-12 pr-12 py-4 rounded-xl bg-secondary/50 border border-border/50 text-lg placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                   autoFocus
                 />
@@ -515,9 +515,9 @@ export function Navbar() {
 
               {/* Quick Search Tags */}
               <div className="mt-6">
-                <p className="text-sm text-muted-foreground mb-3">Popular Searches</p>
+                <p className="text-sm text-muted-foreground mb-3">Mashhur qidiruvlar</p>
                 <div className="flex flex-wrap gap-2">
-                  {['Solo Leveling', 'One Piece', 'Action', 'Romance', 'Isekai'].map((tag) => (
+                  {['Solo Leveling', 'One Piece', 'Jangovar', 'Romantika', 'Isekai'].map((tag) => (
                     <motion.button
                       key={tag}
                       className="px-3 py-1.5 rounded-full bg-secondary/50 text-sm hover:bg-secondary transition-colors"
