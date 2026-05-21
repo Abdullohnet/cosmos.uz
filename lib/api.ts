@@ -228,6 +228,33 @@ export async function apiGetAdminStats() {
   return res.json()
 }
 
+export async function apiGetAdminApplications() {
+  const res = await fetch('/api/admin/applications')
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.applications ?? []
+}
+
+export async function apiReviewApplication(id: string, action: 'approve' | 'reject', note?: string) {
+  const res = await fetch('/api/admin/applications', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, action, note }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Xato')
+  return data
+}
+
+export async function apiGetAdminUsers(q?: string, role?: string) {
+  const params = new URLSearchParams()
+  if (q) params.set('q', q)
+  if (role) params.set('role', role)
+  const res = await fetch(`/api/admin/users?${params}`)
+  if (!res.ok) return { users: [], pagination: null }
+  return res.json()
+}
+
 // ──────────────────────── TRANSLATOR ────────────────────────
 
 export async function apiGetTranslatorMangas() {

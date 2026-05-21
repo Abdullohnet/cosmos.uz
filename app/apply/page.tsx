@@ -58,9 +58,32 @@ export default function ApplyPage() {
 
   const handleSubmit = async () => {
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1800))
-    setLoading(false)
-    setSubmitted(true)
+    try {
+      const res = await fetch('/api/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: form.fullName,
+          email: form.email,
+          phone: form.phone,
+          telegram: form.telegram,
+          languages: form.languages,
+          experience: form.experience,
+          portfolioLinks: form.portfolioLinks,
+          previousManga: form.previousManga,
+          genres: form.genres,
+          motivation: form.motivation,
+          sampleText: form.sampleText,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Xato yuz berdi')
+      setSubmitted(true)
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Xato yuz berdi')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (submitted) {

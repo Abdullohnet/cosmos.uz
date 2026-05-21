@@ -18,7 +18,7 @@ import { ParticlesBackground } from '@/components/particles'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { TranslatorApplication, Discount } from '@/lib/store'
-import { apiGetAdminStats } from '@/lib/api'
+import { apiGetAdminStats, apiGetAdminApplications, apiReviewApplication, apiGetAdminUsers } from '@/lib/api'
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -131,11 +131,13 @@ export default function AdminPanel() {
   const [apiStats, setApiStats] = useState<any>(null)
 
   useEffect(() => {
-    apiGetAdminStats().then(data => { if (data) setApiStats(data) }).catch(() => {})
+    apiGetAdminStats().then(data => { if (data?.stats) setApiStats(data.stats) }).catch(() => {})
+    apiGetAdminApplications().then(apps => { if (apps.length > 0) setApplications(apps.map((a: Record<string, unknown>) => ({ id: a.id, fullName: a.full_name, email: a.email, phone: a.phone, telegram: a.telegram, languages: a.languages, experience: a.experience, portfolioLinks: a.portfolio_links, previousManga: a.previous_manga, genres: a.genres, motivation: a.motivation, sampleText: a.sample_text, status: a.status, submittedAt: a.created_at, reviewedAt: a.updated_at }))) }).catch(() => {})
+    apiGetAdminUsers().then(d => { if (d.users?.length > 0) setUsers(d.users.map((u: Record<string, unknown>) => ({ id: u.id, username: u.username, email: u.email, role: u.role, subscription: u.subscription, level: u.level, diamonds: u.diamonds, status: 'active', joinedAt: u.created_at }))) }).catch(() => {})
   }, [])
 
   const stats = {
-    totalUsers: apiStats?.total_users ?? 125000,
+    totalUsers: apiStats?.totalUsers ?? 125000,
     newUsersToday: apiStats?.new_users_today ?? 342,
     activeUsers: apiStats?.active_users ?? 18500,
     totalViews: apiStats?.total_views ?? 15000000,
@@ -146,8 +148,16 @@ export default function AdminPanel() {
     pendingApplications: applications.filter(a => a.status === 'pending').length
   }
 
-  const approveApp = (id: string) => setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'approved', reviewedAt: new Date().toISOString() } : a))
-  const rejectApp = (id: string) => {
+  const approveApp = async (id: string) => {
+    try {
+      await apiReviewApplication(id, 'approve')
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'approved', reviewedAt: new Date().toISOString() } : a))
+    } catch { setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'approved', reviewedAt: new Date().toISOString() } : a)) }
+  }
+  const rejectApp = async (id: string) => {
+    try {
+      await apiReviewApplication(id, 'reject', rejectNote)
+    } catch {}
     setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'rejected', reviewedAt: new Date().toISOString(), reviewNote: rejectNote || 'Admin tomonidan rad etildi.' } : a))
     setShowRejectModal(null); setRejectNote('')
   }

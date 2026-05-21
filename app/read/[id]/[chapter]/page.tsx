@@ -34,7 +34,9 @@ export default function ReaderPage() {
   const { gainXP, isAuthenticated } = useUserStore()
 
   const [manga, setManga] = useState<Manga | null>(null)
-  const chapterNumber = parseInt(params.chapter as string) || 1
+  const [chapterData, setChapterData] = useState<{ title: string; prevChapter: number | null; nextChapter: number | null } | null>(null)
+  const [dbPages, setDbPages] = useState<{ page_number: number; image_url: string }[]>([])
+  const chapterNumber = parseFloat(params.chapter as string) || 1
 
   useEffect(() => {
     if (!params.id) return
@@ -43,10 +45,23 @@ export default function ReaderPage() {
       .catch(() => {})
   }, [params.id])
 
-  const pages = Array.from({ length: 20 }, (_, i) => ({
-    id: i + 1,
-    url: `https://images.unsplash.com/photo-${1612178537253 + i * 1000}-bccd437b730e?w=800&h=1200&fit=crop`,
-  }))
+  useEffect(() => {
+    if (!params.id || !params.chapter) return
+    fetch(`/api/manga/${params.id}/chapters/${params.chapter}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.pages) setDbPages(data.pages)
+        if (data.chapter) setChapterData({ title: data.chapter.title, prevChapter: data.prevChapter, nextChapter: data.nextChapter })
+      })
+      .catch(() => {})
+  }, [params.id, params.chapter])
+
+  const pages = dbPages.length > 0
+    ? dbPages.map((p, i) => ({ id: i + 1, url: p.image_url }))
+    : Array.from({ length: 20 }, (_, i) => ({
+        id: i + 1,
+        url: `https://images.unsplash.com/photo-${1612178537253 + i * 1000}-bccd437b730e?w=800&h=1200&fit=crop`,
+      }))
 
   const totalChapters = manga?.chapters ?? 999
   const hasPrevChapter = chapterNumber > 1

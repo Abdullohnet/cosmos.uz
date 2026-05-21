@@ -46,13 +46,49 @@ export default function TranslatorDashboard() {
 
   const [myMangas, setMyMangas] = useState<Manga[]>([])
   const [apiStats, setApiStats] = useState<any>(null)
+  const [mangaError, setMangaError] = useState('')
+  const [mangaForm, setMangaForm] = useState({ title: '', author: '', artist: '', description: '', type: 'manhwa', status: 'ongoing', cover: '' })
+  const [mangaLoading, setMangaLoading] = useState(false)
+  const [chapterError, setChapterError] = useState('')
+  const [selectedMangaId, setSelectedMangaId] = useState('')
 
-  useEffect(() => {
+  const loadMangas = () => {
     apiGetTranslatorMangas().then(({ mangas, stats }) => {
-      if (mangas.length > 0) setMyMangas(mangas)
+      setMyMangas(mangas)
       if (stats) setApiStats(stats)
     }).catch(() => {})
-  }, [])
+  }
+
+  useEffect(() => { loadMangas() }, [])
+
+  const handleCreateManga = async () => {
+    if (!mangaForm.title) { setMangaError('Manga nomi kiritilishi shart'); return }
+    setMangaLoading(true); setMangaError('')
+    try {
+      const res = await fetch('/api/manga', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: mangaForm.title,
+          author: mangaForm.author,
+          artist: mangaForm.artist,
+          description: mangaForm.description,
+          type: mangaForm.type,
+          status: mangaForm.status,
+          cover: mangaForm.cover || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(mangaForm.title)}`,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Xato')
+      setShowMangaModal(false)
+      setMangaForm({ title: '', author: '', artist: '', description: '', type: 'manhwa', status: 'ongoing', cover: '' })
+      loadMangas()
+    } catch (err: unknown) {
+      setMangaError(err instanceof Error ? err.message : 'Xato yuz berdi')
+    } finally {
+      setMangaLoading(false)
+    }
+  }
 
   const stats = {
     totalManga: apiStats?.manga_count ?? myMangas.length || 3,
@@ -75,14 +111,64 @@ export default function TranslatorDashboard() {
     }
   }
 
+  const fileToDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+
   const handleUpload = async () => {
-    setUploading(true); setUploadProgress(0)
-    for (let i = 0; i <= 100; i += 5) {
-      await new Promise(r => setTimeout(r, 80))
-      setUploadProgress(i)
+    const mangaId = selectedMangaId || myMangas.find(m => m.title === chapterForm.manga)?.id
+    if (!mangaId) { setChapterError('Manga tanlanishi shart'); return }
+    if (!chapterForm.number) { setChapterError('Bob raqami kiritilishi shart'); return }
+    if (uploadMode === 'pdf' && !pdfFile && uploadMode === 'images' && imageFiles.length === 0) {
+      setChapterError('Fayl yuklanishi shart'); return
     }
-    setUploading(false); setUploadDone(true)
-    setTimeout(() => { setShowChapterModal(false); setUploadDone(false); setPdfFile(null); setImageFiles([]) }, 2000)
+    setChapterError('')
+    setUploading(true); setUploadProgress(0)
+
+    try {
+      let pages: string[] = []
+      if (uploadMode === 'images' && imageFiles.length > 0) {
+        for (let i = 0; i < imageFiles.length; i++) {
+          const dataUrl = await fileToDataUrl(imageFiles[i])
+          pages.push(dataUrl)
+          setUploadProgress(Math.round(((i + 1) / imageFiles.length) * 80))
+        }
+      } else if (uploadMode === 'pdf' && pdfFile) {
+        setUploadProgress(40)
+        await new Promise(r => setTimeout(r, 500))
+        setUploadProgress(80)
+      }
+
+      const res = await fetch(`/api/manga/${mangaId}/chapters`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          number: parseFloat(chapterForm.number),
+          title: chapterForm.title || `Bob ${chapterForm.number}`,
+          is_premium: chapterForm.isPaid,
+          pages,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Xato')
+
+      setUploadProgress(100)
+      setUploading(false); setUploadDone(true)
+      loadMangas()
+      setTimeout(() => {
+        setShowChapterModal(false); setUploadDone(false)
+        setPdfFile(null); setImageFiles([])
+        setChapterForm({ manga: '', number: '', title: '', isPaid: false, price: '10', scheduleDate: '', freeAfterDays: '7' })
+        setSelectedMangaId('')
+      }, 2000)
+    } catch (err: unknown) {
+      setUploading(false)
+      setChapterError(err instanceof Error ? err.message : 'Yuklash xatosi')
+    }
   }
 
   const tabs: { id: TabId; label: string; icon: any }[] = [
@@ -401,40 +487,49 @@ export default function TranslatorDashboard() {
                 <button onClick={() => setShowMangaModal(false)} className="p-1.5 rounded-lg hover:bg-secondary/50"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-4">
-                {[['Manga Nomi', 'text', 'Masalan: Solo Leveling'], ['Muallif', 'text', 'Asl muallif ismi'], ['Rassom', 'text', 'Rassom ismi']].map(([label, type, placeholder]) => (
-                  <div key={label as string}>
-                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">{label}</label>
-                    <input type={type as string} placeholder={placeholder as string} className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                  </div>
-                ))}
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Muqova Rasmi</label>
-                  <div className="border-2 border-dashed border-border/50 rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                    <Image className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-xs text-muted-foreground">Rasm yuklash uchun bosing</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">PNG, JPG, WEBP (max 5MB)</p>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Manga Nomi *</label>
+                  <input type="text" placeholder="Masalan: Solo Leveling" value={mangaForm.title} onChange={e => setMangaForm(p => ({...p, title: e.target.value}))} className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Muallif</label>
+                    <input type="text" placeholder="Asl muallif ismi" value={mangaForm.author} onChange={e => setMangaForm(p => ({...p, author: e.target.value}))} className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Rassom</label>
+                    <input type="text" placeholder="Rassom ismi" value={mangaForm.artist} onChange={e => setMangaForm(p => ({...p, artist: e.target.value}))} className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
                   </div>
                 </div>
                 <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Muqova URL (ixtiyoriy)</label>
+                  <input type="url" placeholder="https://..." value={mangaForm.cover} onChange={e => setMangaForm(p => ({...p, cover: e.target.value}))} className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                </div>
+                <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Tavsif</label>
-                  <textarea placeholder="Manga haqida qisqacha..." rows={3} className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" />
+                  <textarea placeholder="Manga haqida qisqacha..." rows={3} value={mangaForm.description} onChange={e => setMangaForm(p => ({...p, description: e.target.value}))} className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Turi</label>
-                    <select className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none">
-                      <option>Manhwa</option><option>Manga</option><option>Manhua</option>
+                    <select value={mangaForm.type} onChange={e => setMangaForm(p => ({...p, type: e.target.value}))} className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none">
+                      <option value="manhwa">Manhwa</option>
+                      <option value="manga">Manga</option>
+                      <option value="manhua">Manhua</option>
                     </select>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Holat</label>
-                    <select className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none">
-                      <option>Davom etmoqda</option><option>Tugallangan</option>
+                    <select value={mangaForm.status} onChange={e => setMangaForm(p => ({...p, status: e.target.value}))} className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none">
+                      <option value="ongoing">Davom etmoqda</option>
+                      <option value="completed">Tugallangan</option>
+                      <option value="hiatus">To'xtatilgan</option>
                     </select>
                   </div>
                 </div>
-                <Button className="w-full bg-gradient-to-r from-primary to-accent">
-                  <Plus className="w-4 h-4 mr-2" />Manga Qo'shish
+                {mangaError && <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{mangaError}</p>}
+                <Button className="w-full bg-gradient-to-r from-primary to-accent" onClick={handleCreateManga} disabled={mangaLoading}>
+                  {mangaLoading ? <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Yaratilmoqda...</span> : <><Plus className="w-4 h-4 mr-2" />Manga Qo'shish</>}
                 </Button>
               </div>
             </motion.div>
@@ -484,10 +579,10 @@ export default function TranslatorDashboard() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs text-muted-foreground mb-1.5 block">Manga tanlang</label>
-                      <select value={chapterForm.manga} onChange={e => setChapterForm(p => ({...p, manga: e.target.value}))}
+                      <select value={selectedMangaId} onChange={e => setSelectedMangaId(e.target.value)}
                         className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none">
                         <option value="">— Tanlang —</option>
-                        {myMangas.map(m => <option key={m.id} value={m.title}>{m.title}</option>)}
+                        {myMangas.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
                       </select>
                     </div>
                     <div>
@@ -612,9 +707,9 @@ export default function TranslatorDashboard() {
                       className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
                   </div>
 
+                  {chapterError && <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{chapterError}</p>}
                   <Button
                     className="w-full bg-gradient-to-r from-primary to-accent"
-                    disabled={(uploadMode === 'pdf' && !pdfFile) && (uploadMode === 'images' && imageFiles.length === 0)}
                     onClick={handleUpload}
                   >
                     <Upload className="w-4 h-4 mr-2" />
