@@ -18,12 +18,17 @@ export default function LoginPage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [successRole, setSuccessRole] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
+  const [siteStats, setSiteStats] = useState({ totalManga: 0, totalUsers: 0, totalTranslators: 0 })
 
   const { login, logout, isAuthenticated } = useUserStore()
   const router = useRouter()
 
   useEffect(() => {
     if (isAuthenticated) logout()
+    fetch('/api/home')
+      .then(r => r.json())
+      .then(d => { if (d.stats) setSiteStats(d.stats) })
+      .catch(() => {})
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,10 +54,12 @@ export default function LoginPage() {
     }
   }
 
+  const fmtCount = (n: number) => n === 0 ? '—' : n >= 1000 ? `${(n/1000).toFixed(n >= 10000 ? 0 : 1)}K+` : `${n}+`
+
   const stats = [
-    { icon: BookOpen, value: '50K+', label: "Manga sarlavhalari" },
-    { icon: Users, value: '1M+', label: "Faol o'quvchilar" },
-    { icon: Star, value: '5K+', label: 'Tarjimonlar' },
+    { icon: BookOpen, value: fmtCount(siteStats.totalManga), label: "Manga sarlavhalari" },
+    { icon: Users, value: fmtCount(siteStats.totalUsers), label: "Ro'yxatdan o'tganlar" },
+    { icon: Star, value: fmtCount(siteStats.totalTranslators), label: 'Tarjimonlar' },
   ]
 
   return (

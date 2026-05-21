@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
 import { 
   Diamond, Crown, Upload, Users, BookOpen, 
   MessageCircle, Mail, Send
@@ -10,6 +11,16 @@ import { Button } from '@/components/ui/button'
 
 export function Footer() {
   const currentYear = new Date().getFullYear()
+  const [stats, setStats] = useState({ totalManga: 0, totalUsers: 0 })
+
+  useEffect(() => {
+    fetch('/api/home')
+      .then(r => r.json())
+      .then(d => { if (d.stats) setStats(d.stats) })
+      .catch(() => {})
+  }, [])
+
+  const fmtCount = (n: number) => n === 0 ? '—' : n >= 1000 ? `${(n/1000).toFixed(n >= 10000 ? 0 : 1)}K+` : String(n)
 
   const footerLinks = {
     browse: [
@@ -108,14 +119,14 @@ export function Footer() {
                   <BookOpen className="w-3 h-3" />
                   <span className="text-[10px]">Manga</span>
                 </div>
-                <p className="text-sm font-bold">50K+</p>
+                <p className="text-sm font-bold">{fmtCount(stats.totalManga)}</p>
               </div>
               <div className="p-2 rounded-lg bg-secondary/30">
                 <div className="flex items-center gap-1.5 text-primary mb-0.5">
                   <Users className="w-3 h-3" />
                   <span className="text-[10px]">Foydalanuvchilar</span>
                 </div>
-                <p className="text-sm font-bold">1M+</p>
+                <p className="text-sm font-bold">{fmtCount(stats.totalUsers)}</p>
               </div>
             </div>
 
