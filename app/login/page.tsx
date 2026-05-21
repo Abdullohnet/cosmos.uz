@@ -11,6 +11,7 @@ import {
 import { useUserStore } from '@/lib/store'
 import { apiLogin, apiRegister } from '@/lib/api'
 import { useRouter } from 'next/navigation'
+import { GoogleLoginButton } from '@/components/google-login-button'
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true)
@@ -84,17 +85,10 @@ export default function LoginPage() {
     }
   }
 
-  const handleSocialLogin = async (provider: string) => {
-    setLoadingRole(provider)
-    // Social login: use mock for now
-    const { mockUser } = await import('@/lib/store')
-    setTimeout(() => {
-      login(mockUser)
-      setSuccessRole('Foydalanuvchi')
-      setLoadingRole(null)
-      setShowSuccess(true)
-      setTimeout(() => router.push('/'), 1800)
-    }, 900)
+  const handleTelegramLogin = async () => {
+    setLoadingRole('telegram')
+    setErrorMsg('Telegram login tez orada qo\'shiladi')
+    setTimeout(() => { setLoadingRole(null); setErrorMsg('') }, 2000)
   }
 
   const stats = [
@@ -256,22 +250,13 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-5">
+          <div className="space-y-3 mb-5">
+            <GoogleLoginButton
+              onError={(msg) => setErrorMsg(msg)}
+            />
             <motion.button
-              onClick={() => handleSocialLogin('google')}
-              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/60 hover:border-border transition-all text-sm font-medium"
-              whileHover={{ scale: 1.02, y: -1 }}
-              whileTap={{ scale: 0.97 }}
-              disabled={!!loadingRole || isLoading}
-            >
-              {loadingRole === 'google' ? (
-                <motion.div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }} />
-              ) : <Chrome className="w-4 h-4" />}
-              <span>Google</span>
-            </motion.button>
-            <motion.button
-              onClick={() => handleSocialLogin('telegram')}
-              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/60 hover:border-border transition-all text-sm font-medium"
+              onClick={handleTelegramLogin}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/60 hover:border-border transition-all text-sm font-medium"
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.97 }}
               disabled={!!loadingRole || isLoading}
@@ -279,7 +264,7 @@ export default function LoginPage() {
               {loadingRole === 'telegram' ? (
                 <motion.div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }} />
               ) : <MessageCircle className="w-4 h-4 text-blue-400" />}
-              <span>Telegram</span>
+              <span>Telegram orqali kirish</span>
             </motion.button>
           </div>
 

@@ -119,6 +119,29 @@ export default function TranslatorDashboard() {
       reader.readAsDataURL(file)
     })
 
+  const pdfToImages = async (file: File, onProgress: (p: number) => void): Promise<string[]> => {
+    const pdfjsLib = await import('pdfjs-dist')
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
+
+    const arrayBuffer = await file.arrayBuffer()
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+    const totalPages = pdf.numPages
+    const images: string[] = []
+
+    for (let i = 1; i <= totalPages; i++) {
+      const page = await pdf.getPage(i)
+      const viewport = page.getViewport({ scale: 1.5 })
+      const canvas = document.createElement('canvas')
+      canvas.width = viewport.width
+      canvas.height = viewport.height
+      const ctx = canvas.getContext('2d')!
+      await page.render({ canvasContext: ctx, viewport }).promise
+      images.push(canvas.toDataURL('image/jpeg', 0.85))
+      onProgress(Math.round((i / totalPages) * 80))
+    }
+    return images
+  }
+
   const handleUpload = async () => {
     const mangaId = selectedMangaId || myMangas.find(m => m.title === chapterForm.manga)?.id
     if (!mangaId) { setChapterError('Manga tanlanishi shart'); return }
@@ -138,9 +161,11 @@ export default function TranslatorDashboard() {
           setUploadProgress(Math.round(((i + 1) / imageFiles.length) * 80))
         }
       } else if (uploadMode === 'pdf' && pdfFile) {
-        setUploadProgress(40)
-        await new Promise(r => setTimeout(r, 500))
-        setUploadProgress(80)
+        try {
+          pages = await pdfToImages(pdfFile, setUploadProgress)
+        } catch {
+          throw new Error('PDF ni o\'qishda xato. Fayl buzilgan bo\'lishi mumkin.')
+        }
       }
 
       const res = await fetch(`/api/manga/${mangaId}/chapters`, {

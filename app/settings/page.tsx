@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Settings, User, Bell, Shield, Palette, Eye,
-  Moon, Sun, Globe, LogOut, Trash2, ChevronRight,
-  ArrowLeft, Check, Smartphone, Lock, Mail
+  Moon, Sun, LogOut, Trash2, ChevronRight,
+  ArrowLeft, Check, Lock, AlertCircle, KeyRound
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { ParticlesBackground } from '@/components/particles'
@@ -13,61 +13,6 @@ import { Button } from '@/components/ui/button'
 import { useUserStore, useUIStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-
-const settingsSections = [
-  {
-    id: 'account',
-    label: 'Hisob',
-    icon: User,
-    items: [
-      { id: 'username', label: 'Foydalanuvchi nomi', type: 'text', value: '' },
-      { id: 'email', label: 'Email manzil', type: 'email', value: '' },
-      { id: 'bio', label: 'Bio', type: 'textarea', value: '' },
-    ],
-  },
-  {
-    id: 'notifications',
-    label: 'Bildirishnomalar',
-    icon: Bell,
-    items: [
-      { id: 'new_chapter', label: 'Yangi bob chiqdi', type: 'toggle', value: true },
-      { id: 'achievements', label: 'Yutuqlar', type: 'toggle', value: true },
-      { id: 'rewards', label: 'Mukofotlar', type: 'toggle', value: true },
-      { id: 'social', label: 'Ijtimoiy bildirishnomalar', type: 'toggle', value: false },
-      { id: 'promotional', label: 'Aksiya va reklama', type: 'toggle', value: false },
-    ],
-  },
-  {
-    id: 'reading',
-    label: 'O\'qish sozlamalari',
-    icon: Eye,
-    items: [
-      { id: 'reader_mode', label: 'O\'qish rejimi', type: 'select', value: 'webtoon', options: ['webtoon', 'vertical', 'horizontal'] },
-      { id: 'auto_next', label: 'Avtomatik keyingi bob', type: 'toggle', value: true },
-      { id: 'show_comments', label: 'Izohlarni ko\'rsatish', type: 'toggle', value: true },
-    ],
-  },
-  {
-    id: 'appearance',
-    label: 'Ko\'rinish',
-    icon: Palette,
-    items: [
-      { id: 'theme', label: 'Mavzu', type: 'theme', value: 'dark' },
-      { id: 'particles', label: 'Zarralar animatsiyasi', type: 'toggle', value: true },
-      { id: 'language', label: 'Til', type: 'select', value: 'uz', options: ['uz', 'ru', 'en'] },
-    ],
-  },
-  {
-    id: 'privacy',
-    label: 'Maxfiylik',
-    icon: Shield,
-    items: [
-      { id: 'public_profile', label: 'Ochiq profil', type: 'toggle', value: true },
-      { id: 'show_reading_history', label: 'O\'qish tarixini ko\'rsatish', type: 'toggle', value: false },
-      { id: 'allow_messages', label: 'Xabar olishga ruxsat', type: 'toggle', value: true },
-    ],
-  },
-]
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('account')
@@ -86,7 +31,18 @@ export default function SettingsPage() {
     allow_messages: true,
   })
 
-  const { user, logout, isAuthenticated } = useUserStore()
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [pwLoading, setPwLoading] = useState(false)
+  const [pwError, setPwError] = useState('')
+  const [pwSuccess, setPwSuccess] = useState(false)
+
+  const [username, setUsername] = useState('')
+  const [bio, setBio] = useState('')
+  const [saveLoading, setSaveLoading] = useState(false)
+
+  const { user, logout, isAuthenticated, login } = useUserStore()
   const { showParticles, toggleParticles } = useUIStore()
 
   const handleToggle = (id: string) => {
@@ -94,15 +50,69 @@ export default function SettingsPage() {
     setToggleStates(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
-  const handleSave = () => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const handleSaveAccount = async () => {
+    if (!user) return
+    setSaveLoading(true)
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: username || undefined,
+          bio: bio || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Xato')
+      login({ ...user, ...data.data.user })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch {
+      // silent
+    } finally {
+      setSaveLoading(false)
+    }
   }
 
-  const currentSection = settingsSections.find(s => s.id === activeSection)
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPwError('')
+    if (newPassword !== confirmPassword) {
+      setPwError('Yangi parollar mos kelmadi')
+      return
+    }
+    if (newPassword.length < 6) {
+      setPwError('Parol kamida 6 ta belgidan iborat bo\'lishi kerak')
+      return
+    }
+    setPwLoading(true)
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Xato')
+      setPwSuccess(true)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setTimeout(() => setPwSuccess(false), 3000)
+    } catch (err: unknown) {
+      setPwError(err instanceof Error ? err.message : 'Xato yuz berdi')
+    } finally {
+      setPwLoading(false)
+    }
+  }
 
-  const langLabels: Record<string, string> = { uz: 'O\'zbek', ru: 'Русский', en: 'English' }
-  const modeLabels: Record<string, string> = { webtoon: 'Webtoon', vertical: 'Vertikal', horizontal: 'Gorizontal' }
+  const sections = [
+    { id: 'account', label: 'Hisob', icon: User },
+    { id: 'security', label: 'Xavfsizlik', icon: Shield },
+    { id: 'notifications', label: 'Bildirishnomalar', icon: Bell },
+    { id: 'reading', label: 'O\'qish', icon: Eye },
+    { id: 'appearance', label: 'Ko\'rinish', icon: Palette },
+  ]
 
   return (
     <div className="min-h-screen bg-background">
@@ -127,7 +137,7 @@ export default function SettingsPage() {
             {/* Sidebar */}
             <div className="lg:col-span-1">
               <div className="glass rounded-xl overflow-hidden">
-                {settingsSections.map((section, i) => {
+                {sections.map((section, i) => {
                   const Icon = section.icon
                   return (
                     <button
@@ -143,9 +153,7 @@ export default function SettingsPage() {
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
                       <span className="text-sm font-medium">{section.label}</span>
-                      {activeSection === section.id && (
-                        <ChevronRight className="w-4 h-4 ml-auto" />
-                      )}
+                      {activeSection === section.id && <ChevronRight className="w-4 h-4 ml-auto" />}
                     </button>
                   )
                 })}
@@ -161,7 +169,6 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Danger Zone */}
               <div className="glass rounded-xl p-4 mt-4 border border-destructive/20">
                 <h3 className="text-sm font-semibold text-destructive mb-3">Xavfli hudud</h3>
                 <Button variant="destructive" size="sm" className="w-full text-xs gap-2">
@@ -173,151 +180,315 @@ export default function SettingsPage() {
 
             {/* Content */}
             <div className="lg:col-span-3">
-              {currentSection && (
+              <AnimatePresence mode="wait">
                 <motion.div
                   key={activeSection}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <div className="glass rounded-xl p-6">
-                    <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/50">
-                      <div className="p-2 rounded-xl bg-primary/20">
-                        <currentSection.icon className="w-5 h-5 text-primary" />
+                  {/* HISOB */}
+                  {activeSection === 'account' && (
+                    <div className="glass rounded-xl p-6">
+                      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/50">
+                        <div className="p-2 rounded-xl bg-primary/20">
+                          <User className="w-5 h-5 text-primary" />
+                        </div>
+                        <h2 className="font-bold text-lg">Hisob ma&apos;lumotlari</h2>
                       </div>
-                      <h2 className="font-bold text-lg">{currentSection.label}</h2>
+
+                      <div className="space-y-5">
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">Foydalanuvchi nomi</label>
+                          <input
+                            type="text"
+                            defaultValue={user?.username || ''}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder={user?.username || 'Foydalanuvchi nomi'}
+                            className="w-full px-3 py-2.5 rounded-lg bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">Email manzil</label>
+                          <input
+                            type="email"
+                            value={user?.email || ''}
+                            disabled
+                            className="w-full px-3 py-2.5 rounded-lg bg-secondary/30 border border-border/30 text-sm opacity-60 cursor-not-allowed"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">Email manzil o&apos;zgartirib bo&apos;lmaydi</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">Bio</label>
+                          <textarea
+                            defaultValue={user?.bio || ''}
+                            onChange={(e) => setBio(e.target.value)}
+                            placeholder="O'zingiz haqingizda..."
+                            rows={3}
+                            className="w-full px-3 py-2.5 rounded-lg bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-6 pt-4 border-t border-border/50 flex justify-end">
+                        <Button onClick={handleSaveAccount} disabled={saveLoading} className="gap-2">
+                          {saved ? (
+                            <><Check className="w-4 h-4" /> Saqlandi!</>
+                          ) : saveLoading ? (
+                            <motion.div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity }} />
+                          ) : 'Saqlash'}
+                        </Button>
+                      </div>
                     </div>
+                  )}
 
-                    <div className="space-y-6">
-                      {currentSection.items.map((item) => (
-                        <div key={item.id} className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{item.label}</p>
-                          </div>
+                  {/* XAVFSIZLIK — PAROL O'ZGARTIRISH */}
+                  {activeSection === 'security' && (
+                    <div className="glass rounded-xl p-6">
+                      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/50">
+                        <div className="p-2 rounded-xl bg-primary/20">
+                          <Shield className="w-5 h-5 text-primary" />
+                        </div>
+                        <h2 className="font-bold text-lg">Xavfsizlik</h2>
+                      </div>
 
-                          {item.type === 'toggle' && (
+                      <div className="flex items-center gap-3 mb-6 p-4 rounded-xl bg-primary/5 border border-primary/20">
+                        <KeyRound className="w-5 h-5 text-primary flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold">Parolni o&apos;zgartirish</p>
+                          <p className="text-xs text-muted-foreground">Hisobingizni himoya qilish uchun kuchli parol tanlang</p>
+                        </div>
+                      </div>
+
+                      <form onSubmit={handleChangePassword} className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">
+                            <Lock className="w-3.5 h-3.5 inline mr-1.5" />
+                            Joriy parol
+                          </label>
+                          <input
+                            type="password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            placeholder="••••••••"
+                            required
+                            className="w-full px-3 py-2.5 rounded-lg bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">
+                            <Lock className="w-3.5 h-3.5 inline mr-1.5" />
+                            Yangi parol
+                          </label>
+                          <input
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Kamida 6 ta belgi"
+                            required
+                            className="w-full px-3 py-2.5 rounded-lg bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">
+                            <Lock className="w-3.5 h-3.5 inline mr-1.5" />
+                            Yangi parolni tasdiqlang
+                          </label>
+                          <input
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Qayta kiriting"
+                            required
+                            className={cn(
+                              'w-full px-3 py-2.5 rounded-lg bg-secondary/50 border text-sm focus:outline-none focus:ring-2',
+                              confirmPassword && newPassword !== confirmPassword
+                                ? 'border-destructive/50 focus:ring-destructive/30'
+                                : 'border-border/50 focus:ring-primary/50'
+                            )}
+                          />
+                          {confirmPassword && newPassword !== confirmPassword && (
+                            <p className="text-xs text-destructive mt-1">Parollar mos kelmadi</p>
+                          )}
+                        </div>
+
+                        <AnimatePresence>
+                          {pwError && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs font-medium"
+                            >
+                              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                              {pwError}
+                            </motion.div>
+                          )}
+                          {pwSuccess && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-medium"
+                            >
+                              <Check className="w-4 h-4 flex-shrink-0" />
+                              Parol muvaffaqiyatli o&apos;zgartirildi!
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        <div className="pt-2">
+                          <Button
+                            type="submit"
+                            disabled={pwLoading || (!!confirmPassword && newPassword !== confirmPassword)}
+                            className="gap-2"
+                          >
+                            {pwLoading ? (
+                              <motion.div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity }} />
+                            ) : (
+                              <><KeyRound className="w-4 h-4" /> Parolni o&apos;zgartirish</>
+                            )}
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* BILDIRISHNOMALAR */}
+                  {activeSection === 'notifications' && (
+                    <div className="glass rounded-xl p-6">
+                      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/50">
+                        <div className="p-2 rounded-xl bg-primary/20">
+                          <Bell className="w-5 h-5 text-primary" />
+                        </div>
+                        <h2 className="font-bold text-lg">Bildirishnomalar</h2>
+                      </div>
+                      <div className="space-y-5">
+                        {[
+                          { id: 'new_chapter', label: 'Yangi bob chiqdi', desc: 'Bookmark qilgan manhwalaringiz yangi bobi chiqqanda' },
+                          { id: 'achievements', label: 'Yutuqlar', desc: 'Yangi yutuqqa ega bo\'lganda' },
+                          { id: 'rewards', label: 'Mukofotlar', desc: 'Olmos va sovg\'alar olganda' },
+                          { id: 'social', label: 'Ijtimoiy', desc: 'Izohlar va reaksiyalar' },
+                          { id: 'promotional', label: 'Aksiya va reklama', desc: 'Maxsus takliflar va yangiliklar' },
+                        ].map((item) => (
+                          <div key={item.id} className="flex items-center justify-between gap-4">
+                            <div>
+                              <p className="text-sm font-medium">{item.label}</p>
+                              <p className="text-xs text-muted-foreground">{item.desc}</p>
+                            </div>
                             <button
                               onClick={() => handleToggle(item.id)}
                               className={cn(
                                 'relative w-11 h-6 rounded-full transition-colors flex-shrink-0',
-                                (item.id === 'particles' ? showParticles : toggleStates[item.id])
-                                  ? 'bg-primary'
-                                  : 'bg-secondary'
+                                toggleStates[item.id] ? 'bg-primary' : 'bg-secondary'
                               )}
                             >
                               <span className={cn(
                                 'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform',
-                                (item.id === 'particles' ? showParticles : toggleStates[item.id])
-                                  ? 'translate-x-5'
-                                  : 'translate-x-0'
+                                toggleStates[item.id] ? 'translate-x-5' : 'translate-x-0'
                               )} />
                             </button>
-                          )}
-
-                          {item.type === 'text' && (
-                            <input
-                              type="text"
-                              defaultValue={user?.username || ''}
-                              placeholder={item.label}
-                              className="px-3 py-2 rounded-lg bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-full max-w-xs"
-                            />
-                          )}
-
-                          {item.type === 'email' && (
-                            <input
-                              type="email"
-                              defaultValue={user?.email || ''}
-                              placeholder={item.label}
-                              className="px-3 py-2 rounded-lg bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-full max-w-xs"
-                            />
-                          )}
-
-                          {item.type === 'textarea' && (
-                            <textarea
-                              defaultValue={user?.bio || ''}
-                              placeholder="O'zingiz haqingizda..."
-                              rows={3}
-                              className="px-3 py-2 rounded-lg bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-full max-w-xs resize-none"
-                            />
-                          )}
-
-                          {item.type === 'select' && item.options && (
-                            <select
-                              defaultValue={item.value}
-                              className="px-3 py-2 rounded-lg bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            >
-                              {item.options.map(opt => (
-                                <option key={opt} value={opt}>
-                                  {item.id === 'language' ? langLabels[opt] : item.id === 'reader_mode' ? modeLabels[opt] : opt}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-
-                          {item.type === 'theme' && (
-                            <div className="flex items-center gap-2">
-                              <button className="w-9 h-9 rounded-lg bg-zinc-900 border-2 border-primary flex items-center justify-center">
-                                <Moon className="w-4 h-4 text-white" />
-                              </button>
-                              <button className="w-9 h-9 rounded-lg bg-gray-100 border-2 border-border flex items-center justify-center">
-                                <Sun className="w-4 h-4 text-gray-700" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-8 pt-4 border-t border-border/50 flex justify-end">
-                      <Button
-                        onClick={handleSave}
-                        className={cn(
-                          'gap-2 transition-all',
-                          saved && 'bg-success hover:bg-success'
-                        )}
-                      >
-                        {saved ? (
-                          <>
-                            <Check className="w-4 h-4" />
-                            Saqlandi!
-                          </>
-                        ) : (
-                          'Saqlash'
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Security section extra */}
-                  {activeSection === 'privacy' && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
-                      className="glass rounded-xl p-6 mt-4"
-                    >
-                      <h3 className="font-semibold mb-4 flex items-center gap-2">
-                        <Lock className="w-4 h-4 text-primary" />
-                        Xavfsizlik
-                      </h3>
-                      <div className="space-y-3">
-                        <Button variant="outline" className="w-full justify-start gap-3 text-sm">
-                          <Lock className="w-4 h-4" />
-                          Parolni o&apos;zgartirish
-                        </Button>
-                        <Button variant="outline" className="w-full justify-start gap-3 text-sm">
-                          <Mail className="w-4 h-4" />
-                          Emailni tasdiqlash
-                        </Button>
-                        <Button variant="outline" className="w-full justify-start gap-3 text-sm">
-                          <Smartphone className="w-4 h-4" />
-                          Ikki bosqichli tekshiruv
-                        </Button>
+                          </div>
+                        ))}
                       </div>
-                    </motion.div>
+                    </div>
                   )}
+
+                  {/* O'QISH */}
+                  {activeSection === 'reading' && (
+                    <div className="glass rounded-xl p-6">
+                      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/50">
+                        <div className="p-2 rounded-xl bg-primary/20">
+                          <Eye className="w-5 h-5 text-primary" />
+                        </div>
+                        <h2 className="font-bold text-lg">O&apos;qish sozlamalari</h2>
+                      </div>
+                      <div className="space-y-5">
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-sm font-medium">O&apos;qish rejimi</p>
+                            <p className="text-xs text-muted-foreground">Sahifalarni qanday ko&apos;rsatish</p>
+                          </div>
+                          <select className="px-3 py-2 rounded-lg bg-secondary/50 border border-border/50 text-sm focus:outline-none">
+                            <option value="webtoon">Webtoon</option>
+                            <option value="vertical">Vertikal</option>
+                            <option value="horizontal">Gorizontal</option>
+                          </select>
+                        </div>
+                        {[
+                          { id: 'auto_next', label: 'Avtomatik keyingi bob', desc: 'Bob tugaganda avtomatik o\'tish' },
+                          { id: 'show_comments', label: 'Izohlarni ko\'rsatish', desc: 'O\'qish sahifasida izohlar' },
+                        ].map((item) => (
+                          <div key={item.id} className="flex items-center justify-between gap-4">
+                            <div>
+                              <p className="text-sm font-medium">{item.label}</p>
+                              <p className="text-xs text-muted-foreground">{item.desc}</p>
+                            </div>
+                            <button
+                              onClick={() => handleToggle(item.id)}
+                              className={cn(
+                                'relative w-11 h-6 rounded-full transition-colors flex-shrink-0',
+                                toggleStates[item.id] ? 'bg-primary' : 'bg-secondary'
+                              )}
+                            >
+                              <span className={cn(
+                                'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform',
+                                toggleStates[item.id] ? 'translate-x-5' : 'translate-x-0'
+                              )} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* KO'RINISH */}
+                  {activeSection === 'appearance' && (
+                    <div className="glass rounded-xl p-6">
+                      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/50">
+                        <div className="p-2 rounded-xl bg-primary/20">
+                          <Palette className="w-5 h-5 text-primary" />
+                        </div>
+                        <h2 className="font-bold text-lg">Ko&apos;rinish</h2>
+                      </div>
+                      <div className="space-y-5">
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-sm font-medium">Mavzu</p>
+                            <p className="text-xs text-muted-foreground">Sayt rangi</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button className="w-9 h-9 rounded-lg bg-zinc-900 border-2 border-primary flex items-center justify-center">
+                              <Moon className="w-4 h-4 text-white" />
+                            </button>
+                            <button className="w-9 h-9 rounded-lg bg-gray-100 border-2 border-border flex items-center justify-center opacity-40 cursor-not-allowed" disabled>
+                              <Sun className="w-4 h-4 text-gray-700" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-sm font-medium">Zarralar animatsiyasi</p>
+                            <p className="text-xs text-muted-foreground">Fon animatsiyasi (ishlash tezligiga ta&apos;sir qiladi)</p>
+                          </div>
+                          <button
+                            onClick={() => handleToggle('particles')}
+                            className={cn(
+                              'relative w-11 h-6 rounded-full transition-colors flex-shrink-0',
+                              showParticles ? 'bg-primary' : 'bg-secondary'
+                            )}
+                          >
+                            <span className={cn(
+                              'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform',
+                              showParticles ? 'translate-x-5' : 'translate-x-0'
+                            )} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 </motion.div>
-              )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
