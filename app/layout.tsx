@@ -4,6 +4,8 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { MobileBottomNav } from '@/components/mobile-bottom-nav'
 import { BackToTop } from '@/components/back-to-top'
+import { ToastContainer } from '@/components/toast'
+import { ContinueReadingWidget } from '@/components/continue-reading-widget'
 
 const inter = Inter({ 
   subsets: ['latin', 'cyrillic'],
@@ -63,6 +65,8 @@ export default function RootLayout({
         {children}
         <MobileBottomNav />
         <BackToTop />
+        <ToastContainer />
+        <ContinueReadingWidget />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
