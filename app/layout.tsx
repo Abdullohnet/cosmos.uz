@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
+import { ThemeProvider } from '@/components/theme-provider'
 import { MobileBottomNav } from '@/components/mobile-bottom-nav'
 import { BackToTop } from '@/components/back-to-top'
 import { ToastContainer } from '@/components/toast'
@@ -62,15 +63,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="uz" suppressHydrationWarning className={`${inter.variable} ${geistMono.variable} dark bg-background`}>
+    <html lang="uz" suppressHydrationWarning className={`${inter.variable} ${geistMono.variable}`}>
       <body className="font-sans antialiased min-h-screen pb-16 lg:pb-0">
-        <AnnouncementBanner />
-        {children}
-        <MobileBottomNav />
-        <BackToTop />
-        <ToastContainer />
-        <ContinueReadingWidget />
-        <DailyRewardPopup />
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="manga-uz-theme">
+          <AnnouncementBanner />
+          {children}
+          <MobileBottomNav />
+          <BackToTop />
+          <ToastContainer />
+          <ContinueReadingWidget />
+          <DailyRewardPopup />
+        </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

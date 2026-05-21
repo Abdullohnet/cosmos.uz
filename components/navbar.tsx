@@ -10,6 +10,7 @@ import {
   ChevronDown, Star, Upload, PenLine, ArrowRight, Clock, Flame,
   Sun, Moon
 } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import { useUserStore, useUIStore, mockMangas } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -24,8 +25,12 @@ export function Navbar() {
   const searchRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
+  const [mounted, setMounted] = useState(false)
   const { user, isAuthenticated, notifications, markNotificationRead, markAllNotificationsRead, logout } = useUserStore()
-  const { theme, setTheme, bannerVisible } = useUIStore()
+  const { bannerVisible } = useUIStore()
+  const { theme, setTheme } = useTheme()
+
+  useEffect(() => { setMounted(true) }, [])
   const unreadCount = notifications.filter(n => !n.read).length
 
   // Live search results
@@ -221,21 +226,25 @@ export function Navbar() {
 
               {/* Theme Toggle */}
               <motion.button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                onClick={() => mounted && setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className="p-2 rounded-lg hover:bg-secondary/50 transition-colors relative overflow-hidden"
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
               >
-                <AnimatePresence mode="wait">
-                  {theme === 'dark' ? (
-                    <motion.div key="sun" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
-                      <Sun className="w-5 h-5 text-yellow-400" />
-                    </motion.div>
-                  ) : (
-                    <motion.div key="moon" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
-                      <Moon className="w-5 h-5 text-primary" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {!mounted ? (
+                  <div className="w-5 h-5" />
+                ) : (
+                  <AnimatePresence mode="wait">
+                    {theme === 'dark' ? (
+                      <motion.div key="sun" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                        <Sun className="w-5 h-5 text-yellow-400" />
+                      </motion.div>
+                    ) : (
+                      <motion.div key="moon" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                        <Moon className="w-5 h-5 text-primary" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                )}
               </motion.button>
 
               {/* Apply CTA */}
