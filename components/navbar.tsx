@@ -67,9 +67,9 @@ export function Navbar() {
                   transition={{ duration: 2, repeat: Infinity }}
                 />
               </motion.div>
-              <div className="hidden sm:block">
-                <span className="text-xl font-bold text-foreground">Manga</span>
-                <span className="text-xl font-bold text-primary"> UZ</span>
+              <div className="block">
+                <span className="text-base sm:text-xl font-bold text-foreground">Manga</span>
+                <span className="text-base sm:text-xl font-bold text-primary"> UZ</span>
               </div>
             </Link>
 
@@ -399,10 +399,10 @@ export function Navbar() {
                 </div>
               )}
 
-              {/* Mobile Menu Toggle */}
+              {/* Mobile Menu Toggle — only shown on tablet (md-lg) */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-2 rounded-lg hover:bg-secondary/50 transition-colors"
+                className="hidden md:block lg:hidden p-2 rounded-lg hover:bg-secondary/50 transition-colors"
               >
                 {isMobileMenuOpen ? (
                   <X className="w-5 h-5 text-muted-foreground" />

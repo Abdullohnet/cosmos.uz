@@ -12,7 +12,6 @@ import { ParticlesBackground, FloatingOrbs } from '@/components/particles'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import type { TranslatorApplication } from '@/lib/store'
 
 const allLanguages = ['Ingliz', 'Koreys', 'Yapon', 'Xitoy', 'Rus', 'Turk', 'Arab', 'Frantsuz', 'Nemis', 'Ispan']
 const allGenres = ['Action', 'Fantasy', 'Romance', 'Comedy', 'Drama', 'Horror', 'Sci-Fi', 'Slice of Life', 'Sports', 'Supernatural', 'Isekai', 'Thriller']

@@ -63,7 +63,7 @@ export function Footer() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Link href="/apply/translator">
+              <Link href="/apply">
                 <Button
                   size="sm"
                   className="bg-gradient-to-r from-primary to-accent text-primary-foreground glow-primary text-xs"

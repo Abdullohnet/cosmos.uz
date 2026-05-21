@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
+import { MobileBottomNav } from '@/components/mobile-bottom-nav'
+import { BackToTop } from '@/components/back-to-top'
 
 const inter = Inter({ 
   subsets: ['latin', 'cyrillic'],
@@ -14,36 +16,26 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Manga UZ - Premium Manga & Manhwa Platform',
-  description: 'The ultimate premium platform for manga and manhwa lovers. Read, translate, and earn in our thriving community with over 50,000 titles.',
-  generator: 'v0.app',
-  keywords: ['manga', 'manhwa', 'manhua', 'webtoon', 'comics', 'read manga', 'uzbekistan', 'anime'],
+  title: 'Manga UZ - Premium Manga & Manhwa Platformasi',
+  description: "Manga va manhwa ixlosmandlari uchun eng zo'r platforma. O'qing, tarjima qiling va pul ishlang. 50,000+ sarlavha.",
+  keywords: ['manga', 'manhwa', 'manhua', 'webtoon', 'comics', 'manga o\'qish', 'uzbekiston', 'anime', 'manga uz'],
   authors: [{ name: 'Manga UZ Team' }],
   openGraph: {
-    title: 'Manga UZ - Premium Manga & Manhwa Platform',
-    description: 'The ultimate premium platform for manga and manhwa lovers.',
+    title: 'Manga UZ - Premium Manga & Manhwa Platformasi',
+    description: "Manga va manhwa ixlosmandlari uchun eng zo'r platforma.",
     type: 'website',
-    locale: 'en_US',
+    locale: 'uz_UZ',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Manga UZ - Premium Manga & Manhwa Platform',
-    description: 'The ultimate premium platform for manga and manhwa lovers.',
+    title: 'Manga UZ - Premium Manga & Manhwa Platformasi',
+    description: "Manga va manhwa ixlosmandlari uchun eng zo'r platforma.",
   },
   icons: {
     icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
+      { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },
+      { url: '/icon-dark-32x32.png', media: '(prefers-color-scheme: dark)' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
     ],
     apple: '/apple-icon.png',
   },
@@ -51,8 +43,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#1a1625' },
-    { media: '(prefers-color-scheme: dark)', color: '#1a1625' },
+    { media: '(prefers-color-scheme: light)', color: '#0d0b14' },
+    { media: '(prefers-color-scheme: dark)', color: '#0d0b14' },
   ],
   width: 'device-width',
   initialScale: 1,
@@ -66,9 +58,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${geistMono.variable} dark bg-background`}>
-      <body className="font-sans antialiased min-h-screen">
+    <html lang="uz" suppressHydrationWarning className={`${inter.variable} ${geistMono.variable} dark bg-background`}>
+      <body className="font-sans antialiased min-h-screen pb-16 lg:pb-0">
         {children}
+        <MobileBottomNav />
+        <BackToTop />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
