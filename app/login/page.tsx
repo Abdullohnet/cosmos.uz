@@ -8,7 +8,8 @@ import {
   MessageCircle, Chrome, Sparkles, Diamond,
   Star, Users, BookOpen, Shield, LogIn
 } from 'lucide-react'
-import { useUserStore, mockUser, mockTranslatorUser, mockAdminUser } from '@/lib/store'
+import { useUserStore } from '@/lib/store'
+import { apiLogin, apiRegister } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
@@ -21,47 +22,79 @@ export default function LoginPage() {
   const [loadingRole, setLoadingRole] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [successRole, setSuccessRole] = useState('')
-  
+  const [errorMsg, setErrorMsg] = useState('')
+
   const { login, logout, isAuthenticated } = useUserStore()
   const router = useRouter()
 
   useEffect(() => {
-    if (isAuthenticated) {
-      logout()
-    }
+    if (isAuthenticated) logout()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    await new Promise(resolve => setTimeout(resolve, 1200))
-    login(mockUser)
-    setSuccessRole('Foydalanuvchi')
-    setShowSuccess(true)
-    setTimeout(() => { router.push('/') }, 2000)
+    setErrorMsg('')
+    try {
+      let user
+      if (isLogin) {
+        ({ user } = await apiLogin(email, password))
+      } else {
+        ({ user } = await apiRegister(username, email, password))
+      }
+      login(user)
+      setSuccessRole(user.role === 'admin' ? 'Admin' : user.role === 'translator' ? 'Tarjimon' : 'Foydalanuvchi')
+      setShowSuccess(true)
+      const dest = user.role === 'admin' ? '/admin' : user.role === 'translator' ? '/translator' : '/'
+      setTimeout(() => router.push(dest), 1800)
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Xato yuz berdi')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleDemoLogin = async (role: 'user' | 'translator' | 'admin') => {
     setLoadingRole(role)
-    await new Promise(resolve => setTimeout(resolve, 900))
-    const userMap = { user: mockUser, translator: mockTranslatorUser, admin: mockAdminUser }
+    setErrorMsg('')
+    const creds = {
+      user: { email: 'fan@mangauz.com', password: 'demo1234' },
+      translator: { email: 'translator@mangauz.com', password: 'demo1234' },
+      admin: { email: 'admin@mangauz.com', password: 'admin123' },
+    }
     const labelMap = { user: 'Foydalanuvchi', translator: 'Tarjimon', admin: 'Admin' }
-    login(userMap[role])
-    setSuccessRole(labelMap[role])
-    setLoadingRole(null)
-    setShowSuccess(true)
-    const dest = role === 'admin' ? '/admin' : role === 'translator' ? '/translator' : '/'
-    setTimeout(() => { router.push(dest) }, 1800)
+    try {
+      const { user } = await apiLogin(creds[role].email, creds[role].password)
+      login(user)
+      setSuccessRole(labelMap[role])
+      setLoadingRole(null)
+      setShowSuccess(true)
+      const dest = role === 'admin' ? '/admin' : role === 'translator' ? '/translator' : '/'
+      setTimeout(() => router.push(dest), 1800)
+    } catch {
+      // If API fails (e.g. wrong password), fall back to mock login for demo
+      const { mockUser, mockTranslatorUser, mockAdminUser } = await import('@/lib/store')
+      const userMap = { user: mockUser, translator: mockTranslatorUser, admin: mockAdminUser }
+      login(userMap[role])
+      setSuccessRole(labelMap[role])
+      setLoadingRole(null)
+      setShowSuccess(true)
+      const dest = role === 'admin' ? '/admin' : role === 'translator' ? '/translator' : '/'
+      setTimeout(() => router.push(dest), 1800)
+    }
   }
 
   const handleSocialLogin = async (provider: string) => {
     setLoadingRole(provider)
-    await new Promise(resolve => setTimeout(resolve, 900))
-    login(mockUser)
-    setSuccessRole('Foydalanuvchi')
-    setLoadingRole(null)
-    setShowSuccess(true)
-    setTimeout(() => { router.push('/') }, 1800)
+    // Social login: use mock for now
+    const { mockUser } = await import('@/lib/store')
+    setTimeout(() => {
+      login(mockUser)
+      setSuccessRole('Foydalanuvchi')
+      setLoadingRole(null)
+      setShowSuccess(true)
+      setTimeout(() => router.push('/'), 1800)
+    }, 900)
   }
 
   const stats = [
@@ -310,6 +343,15 @@ export default function LoginPage() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+
+            {errorMsg && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-medium"
+              >
+                <span>⚠️</span> {errorMsg}
+              </motion.div>
+            )}
 
             {isLogin && (
               <div className="flex items-center justify-between text-sm pt-0.5">

@@ -15,6 +15,7 @@ import { MangaCard, MangaCarousel } from '@/components/manga-card'
 import { QuickViewModal } from '@/components/quick-view-modal'
 import { mockMangas, genres } from '@/lib/store'
 import type { Manga } from '@/lib/store'
+import { apiGetMangas } from '@/lib/api'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -75,17 +76,30 @@ const genreIcons: Record<string, string> = {
 export default function HomePage() {
   const [quickViewManga, setQuickViewManga] = useState<Manga | null>(null)
   const [activeGenre, setActiveGenre] = useState<string | null>(null)
+  const [mangas, setMangas] = useState<Manga[]>(mockMangas)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const trendingMangas = [...mockMangas].sort((a, b) => b.views - a.views)
-  const topRatedMangas = [...mockMangas].sort((a, b) => b.rating - a.rating)
-  const latestMangas = [...mockMangas].sort((a, b) =>
+  useEffect(() => {
+    apiGetMangas({ limit: 50, sort: 'views' })
+      .then(({ manga }) => {
+        if (manga.length > 0) setMangas(manga)
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false))
+  }, [])
+
+  const trendingMangas = [...mangas].sort((a, b) => b.views - a.views)
+  const topRatedMangas = [...mangas].sort((a, b) => b.rating - a.rating)
+  const latestMangas = [...mangas].sort((a, b) =>
     new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   )
-  const hotMangas = mockMangas.filter(m => m.isHot)
+  const hotMangas = mangas.filter(m => m.isHot).length > 0
+    ? mangas.filter(m => m.isHot)
+    : mangas.slice(0, 5)
 
   const filteredByGenre = activeGenre
-    ? mockMangas.filter(m => m.genres.includes(activeGenre))
-    : mockMangas.slice(0, 4)
+    ? mangas.filter(m => m.genres.includes(activeGenre))
+    : mangas.slice(0, 4)
 
   const topTranslators = [
     { id: 't1', name: 'TeamSL', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop', manga: 45, followers: 25000 },
@@ -110,7 +124,7 @@ export default function HomePage() {
       <ParticlesBackground />
       <FloatingOrbs />
       <Navbar />
-      <HeroSlider mangas={mockMangas} />
+      <HeroSlider mangas={mangas.length > 0 ? mangas : mockMangas} />
 
       <main className="relative z-10 container mx-auto px-3 sm:px-4 pb-8">
 
@@ -387,7 +401,7 @@ export default function HomePage() {
                       <p className="text-[11px] font-bold">{pack.name}</p>
                       <div className="flex items-center gap-1 mt-0.5">
                         <Diamond className="w-3 h-3 text-yellow-400" />
-                        <span className="text-xs font-black">{pack.diamonds.toLocaleString()}</span>
+                        <span className="text-xs font-black">{pack.diamonds >= 1000 ? `${(pack.diamonds/1000).toFixed(1)}K` : pack.diamonds}</span>
                       </div>
                     </div>
                     <div className="text-right">
