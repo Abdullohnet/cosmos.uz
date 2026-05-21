@@ -439,7 +439,7 @@ export default function HomePage() {
           title="Sizga Tavsiya"
           subtitle="Sizning didingizga mos"
           icon={<Sparkles className="w-4 h-4 text-accent" />}
-          mangas={[...mockMangas].sort(() => Math.random() - 0.5)}
+          mangas={[...mockMangas].slice().reverse()}
           seeAllLink="/browse"
         />
       </main>

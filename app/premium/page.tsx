@@ -98,8 +98,10 @@ export default function PremiumPage() {
     return price
   }
 
-  const formatPrice = (price: number) =>
-    new Intl.NumberFormat('uz-UZ').format(price) + ' UZS'
+  const formatPrice = (price: number) => {
+    const formatted = price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    return formatted + ' UZS'
+  }
 
   return (
     <div className="min-h-screen bg-background">
