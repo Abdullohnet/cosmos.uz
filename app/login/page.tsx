@@ -4,14 +4,12 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Mail, Lock, User, Eye, EyeOff, ArrowRight, 
-  MessageCircle, Chrome, Sparkles, Diamond,
-  Star, Users, BookOpen, Shield, LogIn
+  Mail, Lock, User, Eye, EyeOff,
+  Sparkles, Diamond, Star, Users, BookOpen, Shield, LogIn
 } from 'lucide-react'
 import { useUserStore } from '@/lib/store'
 import { apiLogin, apiRegister } from '@/lib/api'
 import { useRouter } from 'next/navigation'
-import { GoogleLoginButton } from '@/components/google-login-button'
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true)
@@ -85,11 +83,6 @@ export default function LoginPage() {
     }
   }
 
-  const handleTelegramLogin = async () => {
-    setLoadingRole('telegram')
-    setErrorMsg('Telegram login tez orada qo\'shiladi')
-    setTimeout(() => { setLoadingRole(null); setErrorMsg('') }, 2000)
-  }
 
   const stats = [
     { icon: BookOpen, value: '50K+', label: "Manga sarlavhalari" },
@@ -250,29 +243,6 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="space-y-3 mb-5">
-            <GoogleLoginButton
-              onError={(msg) => setErrorMsg(msg)}
-            />
-            <motion.button
-              onClick={handleTelegramLogin}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/60 hover:border-border transition-all text-sm font-medium"
-              whileHover={{ scale: 1.02, y: -1 }}
-              whileTap={{ scale: 0.97 }}
-              disabled={!!loadingRole || isLoading}
-            >
-              {loadingRole === 'telegram' ? (
-                <motion.div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }} />
-              ) : <MessageCircle className="w-4 h-4 text-blue-400" />}
-              <span>Telegram orqali kirish</span>
-            </motion.button>
-          </div>
-
-          <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-border/40" />
-            <span className="text-xs text-muted-foreground px-1">yoki email bilan</span>
-            <div className="flex-1 h-px bg-border/40" />
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <AnimatePresence>
