@@ -19,29 +19,8 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { TranslatorApplication, Discount } from '@/lib/store'
 import { apiGetAdminStats, apiGetAdminApplications, apiReviewApplication, apiGetAdminUsers } from '@/lib/api'
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const mockApplications: TranslatorApplication[] = [
-  { id: '1', fullName: 'Ali Karimov', email: 'ali@example.com', phone: '+998901234567', telegram: '@ali_uz', languages: ['Koreys', 'Ingliz'], experience: '2-3 yil', portfolioLinks: 't.me/ali_trans', previousManga: 'Solo Leveling 1-50', genres: ['Action', 'Fantasy'], motivation: "O'zbek o'quvchilarga sifatli tarjima yetkazmoqchiman. Koreyscha yaxshi bilaman va 2 yildan beri tarjima qilyapman.", sampleText: 'Namuna tarjima matn...', status: 'pending', submittedAt: new Date(Date.now() - 7200000).toISOString() },
-  { id: '2', fullName: 'Sardor Tursunov', email: 'sardor@example.com', phone: '+998911234567', telegram: '@sardor_t', languages: ['Yapon', 'Ingliz'], experience: '1-2 yil', portfolioLinks: '', previousManga: 'Demon Slayer 1-20 bob', genres: ['Action', 'Drama', 'Horror'], motivation: "Yapon mangasini o'zbek tiliga o'girish orzuim edi. Yaponchani B2 darajasida bilaman.", sampleText: '', status: 'pending', submittedAt: new Date(Date.now() - 18000000).toISOString() },
-  { id: '3', fullName: 'Dilshod Rahimov', email: 'dilshod@example.com', phone: '+998931234567', telegram: '@dilshod_manga', languages: ['Xitoy', 'Ingliz', 'Koreys'], experience: '3+ yil', portfolioLinks: 'youtube.com/dilshod', previousManga: '22 ta manga, 500+ bob', genres: ['Fantasy', 'Isekai', 'Romance'], motivation: "Professional tarjimonman. O'zbekistonda manga madaniyatini rivojlantirmoqchiman.", sampleText: 'Sifatli namuna tarjima...', status: 'approved', submittedAt: new Date(Date.now() - 86400000).toISOString(), reviewedAt: new Date(Date.now() - 43200000).toISOString() },
-  { id: '4', fullName: 'Zulfiya Xasanova', email: 'zulfiya@example.com', phone: '+998901112233', telegram: '@zulfiya_tr', languages: ['Koreys'], experience: 'Yangi boshlovchi (0-6 oy)', portfolioLinks: '', previousManga: 'Hali tarjima qilmaganman', genres: ['Romance', 'Slice of Life'], motivation: "Koreyscha o'qib tugatdim, endi amaliyot uchun...", sampleText: '', status: 'rejected', submittedAt: new Date(Date.now() - 172800000).toISOString(), reviewedAt: new Date(Date.now() - 86400000).toISOString(), reviewNote: "Tajriba yetarli emas, keyinroq qayta ariza topshiring." },
-]
-
-const mockDiscounts: Discount[] = [
-  { id: '1', name: 'Yoz Chegirmasi', code: 'SUMMER50', type: 'percent', value: 50, target: 'all', startDate: '2025-06-01', endDate: '2025-08-31', maxUses: 1000, usedCount: 342, isActive: true },
-  { id: '2', name: 'Yangi Foydalanuvchi', code: 'NEWUSER', type: 'fixed', value: 100, target: 'diamonds', startDate: '2025-01-01', endDate: '2025-12-31', maxUses: 9999, usedCount: 5820, isActive: true },
-  { id: '3', name: 'Pro Obuna', code: 'PRO30', type: 'percent', value: 30, target: 'pro', startDate: '2025-05-01', endDate: '2025-05-31', maxUses: 500, usedCount: 500, isActive: false },
-]
-
-const mockUsers = [
-  { id: '1', username: 'MangaKing', email: 'king@example.com', level: 99, role: 'translator', subscription: 'proplus', joinDate: '2024-01-01', status: 'active', avatar: 'MK' },
-  { id: '2', username: 'OtakuMaster', email: 'otaku@example.com', level: 87, role: 'user', subscription: 'pro', joinDate: '2024-02-15', status: 'active', avatar: 'OM' },
-  { id: '3', username: 'WeebLord', email: 'weeb@example.com', level: 76, role: 'user', subscription: 'free', joinDate: '2024-03-20', status: 'banned', avatar: 'WL' },
-  { id: '4', username: 'ReadingNinja', email: 'ninja@example.com', level: 65, role: 'user', subscription: 'standard', joinDate: '2024-04-10', status: 'active', avatar: 'RN' },
-  { id: '5', username: 'AnimeAddict', email: 'anime@example.com', level: 52, role: 'translator', subscription: 'pro', joinDate: '2024-05-05', status: 'active', avatar: 'AA' },
-]
+import { useUserStore } from '@/lib/store'
+import { useRouter } from 'next/navigation'
 
 type AdminTab = 'overview' | 'applications' | 'users' | 'discounts' | 'economy' | 'reports'
 
@@ -112,10 +91,19 @@ function StatusBadge({ status }: { status: string }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AdminPanel() {
+  const user = useUserStore(s => s.user)
+  const router = useRouter()
+
+  useEffect(() => {
+    if (user === null) return
+    if (user.role !== 'admin') router.replace('/')
+  }, [user, router])
+
   const [activeTab, setActiveTab] = useState<AdminTab>('overview')
-  const [applications, setApplications] = useState(mockApplications)
-  const [discounts, setDiscounts] = useState(mockDiscounts)
-  const [users, setUsers] = useState(mockUsers)
+  const [applications, setApplications] = useState<TranslatorApplication[]>([])
+  const [discounts, setDiscounts] = useState<Discount[]>([])
+  const [users, setUsers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedApp, setSelectedApp] = useState<TranslatorApplication | null>(null)
   const [rejectNote, setRejectNote] = useState('')
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null)
@@ -130,35 +118,57 @@ export default function AdminPanel() {
   })
   const [apiStats, setApiStats] = useState<any>(null)
 
-  useEffect(() => {
-    apiGetAdminStats().then(data => { if (data?.stats) setApiStats(data.stats) }).catch(() => {})
-    apiGetAdminApplications().then(apps => { if (apps.length > 0) setApplications(apps.map((a: Record<string, unknown>) => ({ id: a.id, fullName: a.full_name, email: a.email, phone: a.phone, telegram: a.telegram, languages: a.languages, experience: a.experience, portfolioLinks: a.portfolio_links, previousManga: a.previous_manga, genres: a.genres, motivation: a.motivation, sampleText: a.sample_text, status: a.status, submittedAt: a.created_at, reviewedAt: a.updated_at }))) }).catch(() => {})
-    apiGetAdminUsers().then(d => { if (d.users?.length > 0) setUsers(d.users.map((u: Record<string, unknown>) => ({ id: u.id, username: u.username, email: u.email, role: u.role, subscription: u.subscription, level: u.level, diamonds: u.diamonds, status: 'active', joinedAt: u.created_at }))) }).catch(() => {})
-  }, [])
+  const loadData = () => {
+    setLoading(true)
+    Promise.all([
+      apiGetAdminStats().catch(() => null),
+      apiGetAdminApplications().catch(() => []),
+      apiGetAdminUsers().catch(() => ({ users: [] })),
+    ]).then(([statsData, apps, usersData]) => {
+      if (statsData?.stats) setApiStats(statsData.stats)
+      setApplications((apps as Record<string, unknown>[]).map(a => ({
+        id: a.id as string, fullName: a.full_name as string, email: a.email as string,
+        phone: a.phone as string, telegram: a.telegram as string,
+        languages: (a.languages as string[]) || [], experience: a.experience as string,
+        portfolioLinks: a.portfolio_links as string, previousManga: a.previous_manga as string,
+        genres: (a.genres as string[]) || [], motivation: a.motivation as string,
+        sampleText: a.sample_text as string, status: a.status as 'pending' | 'approved' | 'rejected',
+        submittedAt: a.created_at as string, reviewedAt: a.updated_at as string,
+      })))
+      setUsers(((usersData as any).users || []).map((u: Record<string, unknown>) => ({
+        id: u.id, username: u.username, email: u.email, role: u.role,
+        subscription: u.subscription, level: u.level, diamonds: u.diamonds,
+        status: 'active', joinedAt: u.created_at,
+      })))
+    }).finally(() => setLoading(false))
+  }
+
+  useEffect(() => { loadData() }, [])
 
   const stats = {
-    totalUsers: apiStats?.totalUsers ?? 125000,
-    newUsersToday: apiStats?.new_users_today ?? 342,
-    activeUsers: apiStats?.active_users ?? 18500,
-    totalViews: apiStats?.total_views ?? 15000000,
-    todayViews: apiStats?.today_views ?? 125000,
-    totalRevenue: apiStats?.total_revenue ?? 850000000,
-    todayRevenue: apiStats?.today_revenue ?? 12500000,
-    totalDiamondsSold: apiStats?.total_diamonds_sold ?? 2500000,
-    pendingApplications: applications.filter(a => a.status === 'pending').length
+    totalUsers: apiStats?.totalUsers ?? 0,
+    newUsersToday: apiStats?.newUsersToday ?? 0,
+    totalViews: apiStats?.totalViews ?? 0,
+    totalTranslators: apiStats?.totalTranslators ?? 0,
+    totalManga: apiStats?.totalManga ?? 0,
+    pendingApplications: applications.filter(a => a.status === 'pending').length,
   }
 
   const approveApp = async (id: string) => {
     try {
       await apiReviewApplication(id, 'approve')
       setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'approved', reviewedAt: new Date().toISOString() } : a))
-    } catch { setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'approved', reviewedAt: new Date().toISOString() } : a)) }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Xato yuz berdi')
+    }
   }
   const rejectApp = async (id: string) => {
     try {
       await apiReviewApplication(id, 'reject', rejectNote)
-    } catch {}
-    setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'rejected', reviewedAt: new Date().toISOString(), reviewNote: rejectNote || 'Admin tomonidan rad etildi.' } : a))
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'rejected', reviewedAt: new Date().toISOString(), reviewNote: rejectNote || 'Admin tomonidan rad etildi.' } : a))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Xato yuz berdi')
+    }
     setShowRejectModal(null); setRejectNote('')
   }
   const toggleUserBan = (id: string) => setUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === 'banned' ? 'active' : 'banned' } : u))
@@ -311,9 +321,9 @@ export default function AdminPanel() {
                   {/* Stats Grid */}
                   <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                     <StatCard label="Foydalanuvchilar" value={fmt(stats.totalUsers)} sub={`+${stats.newUsersToday} bugun`} icon={Users} color="primary" trend="up" />
-                    <StatCard label="Ko'rishlar" value={fmt(stats.totalViews)} sub={`+${fmt(stats.todayViews)} bugun`} icon={Eye} color="success" trend="up" />
-                    <StatCard label="Olmozlar" value={fmt(stats.totalDiamondsSold)} sub={`= ${fmtMoney(stats.totalDiamondsSold * 100)}`} icon={Diamond} color="yellow" trend="up" />
-                    <StatCard label="Daromad" value={fmtMoney(stats.totalRevenue)} sub={`+${fmtMoney(stats.todayRevenue)} bugun`} icon={DollarSign} color="accent" trend="up" />
+                    <StatCard label="Ko'rishlar" value={fmt(stats.totalViews)} sub="Jami ko'rishlar" icon={Eye} color="success" trend="up" />
+                    <StatCard label="Mangalar" value={fmt(stats.totalManga)} sub={`${stats.totalTranslators} tarjimon`} icon={BookOpen} color="yellow" trend="up" />
+                    <StatCard label="Tarjimonlar" value={fmt(stats.totalTranslators)} sub="Faol tarjimonlar" icon={DollarSign} color="accent" trend="up" />
                   </div>
 
                   <div className="grid lg:grid-cols-3 gap-6">
@@ -372,7 +382,7 @@ export default function AdminPanel() {
                         </div>
                         <div className="space-y-3">
                           {[
-                            { label: 'Faol foydalanuvchilar', val: (stats.activeUsers / stats.totalUsers * 100).toFixed(1), color: 'from-primary to-accent' },
+                            { label: 'Tarjimonlar ulushi', val: stats.totalUsers > 0 ? (stats.totalTranslators / stats.totalUsers * 100).toFixed(1) : '0', color: 'from-primary to-accent' },
                             { label: 'Premium foydalanuvchilar', val: '8.5', color: 'from-yellow-400 to-orange-500' },
                             { label: 'Server yuklamasi', val: '32', color: 'from-emerald-500 to-teal-500' },
                           ].map(b => (

@@ -17,17 +17,20 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { apiGetTranslatorMangas, apiGetTranslatorEarnings } from '@/lib/api'
 import type { Manga } from '@/lib/store'
+import { useUserStore } from '@/lib/store'
+import { useRouter } from 'next/navigation'
 
 type TabId = 'overview' | 'manga' | 'chapters' | 'earnings' | 'promote'
 
-const recentChapters = [
-  { id: 1, manga: 'Solo Leveling', chapter: 179, views: 12500, earnings: 25000, status: 'published', date: '2 soat oldin', isPaid: false },
-  { id: 2, manga: 'Tower of God', chapter: 520, views: 8400, earnings: 18000, status: 'published', date: '5 soat oldin', isPaid: true },
-  { id: 3, manga: 'Solo Leveling', chapter: 178, views: 18200, earnings: 32000, status: 'published', date: '1 kun oldin', isPaid: false },
-  { id: 4, manga: 'The Beginning After The End', chapter: 156, views: 6800, earnings: 12000, status: 'scheduled', date: 'Ertaga 10:00', isPaid: true },
-]
-
 export default function TranslatorDashboard() {
+  const user = useUserStore(s => s.user)
+  const router = useRouter()
+
+  useEffect(() => {
+    if (user === null) return
+    if (user.role !== 'translator' && user.role !== 'admin') router.replace('/')
+  }, [user, router])
+
   const [activeTab, setActiveTab] = useState<TabId>('overview')
   const [showMangaModal, setShowMangaModal] = useState(false)
   const [showChapterModal, setShowChapterModal] = useState(false)
@@ -91,10 +94,14 @@ export default function TranslatorDashboard() {
   }
 
   const stats = {
-    totalManga: apiStats?.manga_count ?? myMangas.length || 3,
-    totalChapters: myMangas.reduce((s, m) => s + m.chapters, 0) || 245,
-    totalViews: apiStats?.total_views ?? myMangas.reduce((s, m) => s + m.views, 0) || 1250000,
-    todayViews: 15420, totalEarnings: 2500000, todayEarnings: 125000, diamonds: 8500, followers: 12500
+    totalManga: apiStats?.manga_count ?? myMangas.length,
+    totalChapters: myMangas.reduce((s, m) => s + m.chapters, 0),
+    totalViews: apiStats?.total_views ?? myMangas.reduce((s, m) => s + m.views, 0),
+    totalBookmarks: apiStats?.total_bookmarks ?? myMangas.reduce((s, m) => s + m.bookmarks, 0),
+    totalEarnings: Math.floor((apiStats?.total_views ?? 0) * 0.001),
+    todayEarnings: 0,
+    diamonds: 0,
+    followers: 0,
   }
   const fmt = (n: number) => n >= 1000000 ? `${(n/1000000).toFixed(1)}M` : n >= 1000 ? `${(n/1000).toFixed(1)}K` : n.toString()
   const fmtMoney = (n: number) => `${(n/1000).toFixed(0)}K so'm`
@@ -231,7 +238,7 @@ export default function TranslatorDashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
             {[
               { label: 'Jami Manga', value: stats.totalManga, sub: `${stats.totalChapters} bob`, icon: BookOpen, color: 'primary' },
-              { label: 'Ko\'rishlar', value: fmt(stats.totalViews), sub: `+${fmt(stats.todayViews)} bugun`, icon: Eye, color: 'success' },
+              { label: 'Ko\'rishlar', value: fmt(stats.totalViews), sub: `Jami ko'rishlar`, icon: Eye, color: 'success' },
               { label: 'Olmozlar', value: fmt(stats.diamonds), sub: `= ${fmtMoney(stats.diamonds * 100)}`, icon: Diamond, color: 'yellow' },
               { label: 'Obunachilar', value: fmt(stats.followers), sub: '+124 bu hafta', icon: Users, color: 'accent' },
             ].map((s, i) => (
@@ -288,7 +295,7 @@ export default function TranslatorDashboard() {
                             <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
                               <span>{manga.chapters} bob</span>
                               <span>{fmt(manga.views)} ko'rish</span>
-                              <span className="text-yellow-400">{fmtMoney(manga.earnings)}</span>
+                              <span>{fmt(manga.bookmarks)} bookmark</span>
                             </div>
                           </div>
                           <Button variant="outline" size="sm" className="h-7 text-xs flex-shrink-0" onClick={() => setShowChapterModal(true)}>
@@ -307,26 +314,27 @@ export default function TranslatorDashboard() {
                       </Button>
                     </div>
                     <div className="space-y-2">
-                      {recentChapters.map((ch, i) => (
-                        <motion.div key={ch.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/30 transition-colors"
+                      {myMangas.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-4">Hali boblar yo'q</p>
+                      ) : myMangas.slice(0, 4).map((m, i) => (
+                        <motion.div key={m.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/30 transition-colors"
                           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium">{ch.manga}</span>
-                              <span className="text-[10px] text-muted-foreground">#{ch.chapter}</span>
+                              <span className="text-xs font-medium">{m.title}</span>
+                              <span className="text-[10px] text-muted-foreground">{m.chapters} bob</span>
                               <span className={cn('px-1.5 py-0.5 rounded-full text-[9px] font-medium',
-                                ch.status === 'published' ? 'bg-success/20 text-success' : 'bg-primary/20 text-primary')}>
-                                {ch.status === 'published' ? 'Chop etildi' : 'Rejalashtirilgan'}
+                                m.status === 'ongoing' ? 'bg-success/20 text-success' : 'bg-primary/20 text-primary')}>
+                                {m.status === 'ongoing' ? 'Davom etmoqda' : m.status}
                               </span>
-                              {ch.isPaid && <Diamond className="w-3 h-3 text-yellow-400" />}
+                              {m.isPremium && <Diamond className="w-3 h-3 text-yellow-400" />}
                             </div>
                             <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground">
-                              <span>{fmt(ch.views)} ko'rish</span>
-                              <span className="text-yellow-400">{fmtMoney(ch.earnings)}</span>
-                              <span>{ch.date}</span>
+                              <span>{fmt(m.views)} ko'rish</span>
+                              <span>{fmt(m.bookmarks)} bookmark</span>
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0"><Settings className="w-3 h-3" /></Button>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => { setSelectedMangaId(m.id); setShowChapterModal(true) }}><Settings className="w-3 h-3" /></Button>
                         </motion.div>
                       ))}
                     </div>
@@ -343,7 +351,7 @@ export default function TranslatorDashboard() {
                       {[
                         { label: 'Bugun', val: fmtMoney(stats.todayEarnings), gradient: true },
                         { label: 'Bu oy', val: fmtMoney(stats.totalEarnings), gradient: false },
-                        { label: 'Yechib olish mumkin', val: fmtMoney(1850000), gradient: false, action: true },
+                        { label: 'Yechib olish mumkin', val: fmtMoney(stats.totalEarnings), gradient: false, action: true },
                       ].map(e => (
                         <div key={e.label} className={cn('p-3 rounded-lg', e.gradient ? 'bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30' : 'bg-secondary/30')}>
                           <p className="text-[10px] text-muted-foreground mb-1">{e.label}</p>
@@ -394,7 +402,7 @@ export default function TranslatorDashboard() {
                       </div>
                       <div className="p-3">
                         <div className="grid grid-cols-3 gap-2 text-center mb-3">
-                          {[['Bob', manga.chapters], ['Ko\'rish', fmt(manga.views)], ['Daromad', fmtMoney(manga.earnings)]].map(([l, v]) => (
+                          {[['Bob', manga.chapters], ['Ko\'rish', fmt(manga.views)], ['Bookmark', fmt(manga.bookmarks)]].map(([l, v]) => (
                             <div key={l as string}>
                               <p className="text-[10px] text-muted-foreground">{l}</p>
                               <p className="text-xs font-bold">{v}</p>
@@ -422,25 +430,28 @@ export default function TranslatorDashboard() {
                   </Button>
                 </div>
                 <div className="glass rounded-xl overflow-hidden">
-                  {recentChapters.map((ch, i) => (
-                    <div key={ch.id} className={cn('flex items-center gap-4 p-4', i !== 0 && 'border-t border-border/30')}>
-                      <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center font-bold text-sm flex-shrink-0">#{ch.chapter}</div>
+                  {myMangas.length === 0 ? (
+                    <div className="p-8 text-center text-sm text-muted-foreground">
+                      Hali bob yuklanmagan. Yangi manga yarating va bob qo'shing.
+                    </div>
+                  ) : myMangas.map((m, i) => (
+                    <div key={m.id} className={cn('flex items-center gap-4 p-4', i !== 0 && 'border-t border-border/30')}>
+                      <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center font-bold text-sm flex-shrink-0">{m.chapters}</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{ch.manga}</span>
-                          <span className={cn('px-1.5 py-0.5 rounded-full text-[9px] font-medium', ch.status === 'published' ? 'bg-success/20 text-success' : 'bg-primary/20 text-primary')}>
-                            {ch.status === 'published' ? 'Chop etildi' : 'Rejalashtirilgan'}
+                          <span className="text-sm font-medium truncate">{m.title}</span>
+                          <span className={cn('px-1.5 py-0.5 rounded-full text-[9px] font-medium flex-shrink-0', m.status === 'ongoing' ? 'bg-success/20 text-success' : 'bg-primary/20 text-primary')}>
+                            {m.status === 'ongoing' ? 'Davom etmoqda' : m.status}
                           </span>
-                          {ch.isPaid ? <span className="flex items-center gap-0.5 text-[9px] text-yellow-400 font-medium"><Lock className="w-2.5 h-2.5" />To'liq</span>
-                            : <span className="flex items-center gap-0.5 text-[9px] text-success font-medium"><Unlock className="w-2.5 h-2.5" />Bepul</span>}
+                          {m.isPremium ? <span className="flex items-center gap-0.5 text-[9px] text-yellow-400 font-medium flex-shrink-0"><Lock className="w-2.5 h-2.5" />Premium</span>
+                            : <span className="flex items-center gap-0.5 text-[9px] text-success font-medium flex-shrink-0"><Unlock className="w-2.5 h-2.5" />Bepul</span>}
                         </div>
                         <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-0.5">
-                          <span>{fmt(ch.views)} ko'rish</span><span className="text-yellow-400">{fmtMoney(ch.earnings)}</span><span>{ch.date}</span>
+                          <span>{fmt(m.views)} ko'rish</span><span>{fmt(m.bookmarks)} bookmark</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><Edit2 className="w-3.5 h-3.5" /></Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { setSelectedMangaId(m.id); setShowChapterModal(true) }}><Edit2 className="w-3.5 h-3.5" /></Button>
                       </div>
                     </div>
                   ))}
@@ -464,7 +475,7 @@ export default function TranslatorDashboard() {
                   <h3 className="text-sm font-bold mb-4">Yechib olish</h3>
                   <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 mb-4">
                     <span className="text-sm">Mavjud balans</span>
-                    <span className="text-lg font-bold text-success">{fmtMoney(1850000)}</span>
+                    <span className="text-lg font-bold text-success">{fmtMoney(stats.totalEarnings)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mb-3">To'lov usullari: Payme, Click, Paynet, Uzum Bank</p>
                   <Button className="w-full bg-success hover:bg-success/90">Yechib olish</Button>
