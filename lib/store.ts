@@ -102,6 +102,40 @@ export interface Notification {
   createdAt: string
 }
 
+export interface TranslatorApplication {
+  id: string
+  userId?: string
+  fullName: string
+  email: string
+  phone: string
+  telegram: string
+  languages: string[]
+  experience: string
+  portfolioLinks: string
+  previousManga: string
+  genres: string[]
+  motivation: string
+  sampleText: string
+  status: 'pending' | 'approved' | 'rejected'
+  submittedAt: string
+  reviewedAt?: string
+  reviewNote?: string
+}
+
+export interface Discount {
+  id: string
+  name: string
+  code: string
+  type: 'percent' | 'fixed'
+  value: number
+  target: 'all' | 'standard' | 'pro' | 'proplus' | 'diamonds'
+  startDate: string
+  endDate: string
+  maxUses: number
+  usedCount: number
+  isActive: boolean
+}
+
 // Store interfaces
 interface UserStore {
   user: User | null

@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Search, Bell, User, Diamond, Menu, X, Home, BookOpen, 
   TrendingUp, Crown, Settings, LogOut, Gift, Sparkles,
-  ChevronDown, Flame, Star, Clock, Upload
+  ChevronDown, Flame, Star, Clock, Upload, PenLine
 } from 'lucide-react'
 import { useUserStore, mockUser } from '@/lib/store'
 import { Button } from '@/components/ui/button'
@@ -88,6 +88,18 @@ export function Navbar() {
                 </Link>
               ))}
             </div>
+
+            {/* Become Translator CTA */}
+            <Link href="/apply" className="hidden lg:block flex-shrink-0">
+              <motion.div
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/40 text-primary text-xs font-semibold hover:from-primary/30 hover:to-accent/30 transition-all"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <PenLine className="w-3.5 h-3.5" />
+                Muallif bo&apos;lish
+              </motion.div>
+            </Link>
 
             {/* Search Bar */}
             <div className="hidden md:flex flex-1 max-w-md mx-4">
@@ -442,6 +454,17 @@ export function Navbar() {
                     </Link>
                   ))}
                 </div>
+
+                {/* Become Translator Mobile Link */}
+                <Link href="/apply" onClick={() => setIsMobileMenuOpen(false)}>
+                  <motion.div
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/30 text-primary transition-colors"
+                    whileHover={{ x: 4 }}
+                  >
+                    <PenLine className="w-5 h-5" />
+                    <span className="font-semibold">Muallif bo&apos;lish — Ariza topshirish</span>
+                  </motion.div>
+                </Link>
 
                 {/* Mobile Diamond Balance */}
                 {isAuthenticated && user && (
