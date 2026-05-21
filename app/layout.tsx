@@ -6,6 +6,8 @@ import { MobileBottomNav } from '@/components/mobile-bottom-nav'
 import { BackToTop } from '@/components/back-to-top'
 import { ToastContainer } from '@/components/toast'
 import { ContinueReadingWidget } from '@/components/continue-reading-widget'
+import { DailyRewardPopup } from '@/components/daily-reward-popup'
+import { AnnouncementBanner } from '@/components/announcement-banner'
 
 const inter = Inter({ 
   subsets: ['latin', 'cyrillic'],
@@ -62,11 +64,13 @@ export default function RootLayout({
   return (
     <html lang="uz" suppressHydrationWarning className={`${inter.variable} ${geistMono.variable} dark bg-background`}>
       <body className="font-sans antialiased min-h-screen pb-16 lg:pb-0">
+        <AnnouncementBanner />
         {children}
         <MobileBottomNav />
         <BackToTop />
         <ToastContainer />
         <ContinueReadingWidget />
+        <DailyRewardPopup />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

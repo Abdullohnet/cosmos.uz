@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, useInView, AnimatePresence } from 'framer-motion'
 import {
   TrendingUp, Flame, BookOpen, Star, Users, Award,
-  Crown, Diamond, ChevronRight, Sparkles, Zap, Globe,
-  Clock, Heart, Eye, BarChart3
+  Crown, Diamond, ChevronRight, Sparkles, Zap,
+  Clock, Heart, Eye
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
@@ -114,25 +114,6 @@ export default function HomePage() {
 
       <main className="relative z-10 container mx-auto px-3 sm:px-4 pb-8">
 
-        {/* ── Animated Stats ── */}
-        <section className="py-5 sm:py-8">
-          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            className="flex items-center gap-2 mb-4">
-            <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20">
-              <BarChart3 className="w-4 h-4 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-bold">Sayt statistikasi</h2>
-              <p className="text-[10px] text-muted-foreground">Real vaqt ko'rsatkichlari</p>
-            </div>
-          </motion.div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatCard icon={BookOpen} value={52400} label="Jami mangalar" color="bg-primary/5 text-primary" />
-            <StatCard icon={Users} value={1280000} label="Foydalanuvchilar" color="bg-accent/5 text-accent" />
-            <StatCard icon={Eye} value={98500000} label="O'qishlar" color="bg-emerald-500/5 text-emerald-400" suffix="+" />
-            <StatCard icon={Globe} value={47} label="Tillar" color="bg-orange-500/5 text-orange-400" />
-          </div>
-        </section>
 
         {/* ── Kunlik Top ── */}
         <section className="py-3 sm:py-5">

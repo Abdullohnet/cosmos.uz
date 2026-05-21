@@ -170,11 +170,13 @@ interface UIStore {
   readerTheme: 'default' | 'sepia' | 'night'
   brightness: number
   showParticles: boolean
+  bannerVisible: boolean
   setTheme: (theme: 'dark' | 'light') => void
   setReaderMode: (mode: 'vertical' | 'horizontal' | 'webtoon') => void
   setReaderTheme: (theme: 'default' | 'sepia' | 'night') => void
   setBrightness: (brightness: number) => void
   toggleParticles: () => void
+  setBannerVisible: (v: boolean) => void
 }
 
 // Mock data
@@ -208,6 +210,67 @@ export const mockUser: User = {
     { id: '1', name: 'Early Adopter', icon: '⭐', rarity: 'rare' },
     { id: '2', name: 'Pro Member', icon: '👑', rarity: 'epic' },
     { id: '3', name: 'Top Reader', icon: '🔥', rarity: 'legendary' },
+  ]
+}
+
+export const mockTranslatorUser: User = {
+  id: '2',
+  username: 'TeamSL_Translator',
+  email: 'translator@mangauz.com',
+  avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop',
+  level: 45,
+  xp: 4200,
+  xpToNextLevel: 5000,
+  diamonds: 8500,
+  subscription: 'proplus',
+  role: 'translator',
+  createdAt: '2023-06-10',
+  bio: "O'zbek manga platformasining top tarjimoni. Solo Leveling va Tower of God tarjimoni.",
+  followers: 12500,
+  following: 45,
+  readingStats: {
+    chaptersRead: 5200,
+    timeSpent: 120000,
+    mangaCompleted: 234
+  },
+  achievements: [
+    { id: '1', name: 'First Steps', description: 'Read your first chapter', icon: '📖', progress: 1, maxProgress: 1, unlockedAt: '2023-06-10' },
+    { id: '2', name: 'Bookworm', description: 'Read 100 chapters', icon: '📚', progress: 100, maxProgress: 100, unlockedAt: '2023-07-01' },
+    { id: '3', name: 'Top Translator', description: 'Translated 100 chapters', icon: '🌟', progress: 245, maxProgress: 100, unlockedAt: '2023-09-15' },
+  ],
+  badges: [
+    { id: '1', name: 'Verified Translator', icon: '✅', rarity: 'epic' },
+    { id: '2', name: 'Pro Member', icon: '👑', rarity: 'epic' },
+    { id: '3', name: 'Star Translator', icon: '⭐', rarity: 'legendary' },
+  ]
+}
+
+export const mockAdminUser: User = {
+  id: '0',
+  username: 'Admin_MangaUZ',
+  email: 'admin@mangauz.com',
+  avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop',
+  level: 99,
+  xp: 9999,
+  xpToNextLevel: 10000,
+  diamonds: 99999,
+  subscription: 'proplus',
+  role: 'admin',
+  createdAt: '2023-01-01',
+  bio: 'Manga UZ platformasining bosh administratori.',
+  followers: 50000,
+  following: 10,
+  readingStats: {
+    chaptersRead: 10000,
+    timeSpent: 500000,
+    mangaCompleted: 500
+  },
+  achievements: [
+    { id: '1', name: 'Platform Founder', description: 'Founded Manga UZ', icon: '🏆', progress: 1, maxProgress: 1, unlockedAt: '2023-01-01' },
+  ],
+  badges: [
+    { id: '1', name: 'Admin', icon: '🛡️', rarity: 'legendary' },
+    { id: '2', name: 'Founder', icon: '👑', rarity: 'legendary' },
   ]
 }
 
@@ -508,14 +571,23 @@ export const useUIStore = create<UIStore>()(
       readerTheme: 'default',
       brightness: 100,
       showParticles: true,
+      bannerVisible: false,
       setTheme: (theme) => set({ theme }),
       setReaderMode: (mode) => set({ readerMode: mode }),
       setReaderTheme: (theme) => set({ readerTheme: theme }),
       setBrightness: (brightness) => set({ brightness }),
       toggleParticles: () => set((state) => ({ showParticles: !state.showParticles })),
+      setBannerVisible: (v) => set({ bannerVisible: v }),
     }),
     {
       name: 'manga-uz-ui',
+      partialize: (state) => ({
+        theme: state.theme,
+        readerMode: state.readerMode,
+        readerTheme: state.readerTheme,
+        brightness: state.brightness,
+        showParticles: state.showParticles,
+      }),
     }
   )
 )

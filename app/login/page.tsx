@@ -1,14 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Mail, Lock, User, Eye, EyeOff, ArrowRight, 
   MessageCircle, Chrome, Sparkles, Diamond,
-  Star, Users, BookOpen, Shield
+  Star, Users, BookOpen, Shield, LogIn
 } from 'lucide-react'
-import { useUserStore, mockUser } from '@/lib/store'
+import { useUserStore, mockUser, mockTranslatorUser, mockAdminUser } from '@/lib/store'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
@@ -18,26 +18,50 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingRole, setLoadingRole] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [successRole, setSuccessRole] = useState('')
   
-  const { login } = useUserStore()
+  const { login, logout, isAuthenticated } = useUserStore()
   const router = useRouter()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      logout()
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    await new Promise(resolve => setTimeout(resolve, 1200))
     login(mockUser)
+    setSuccessRole('Foydalanuvchi')
     setShowSuccess(true)
     setTimeout(() => { router.push('/') }, 2000)
   }
 
-  const handleSocialLogin = async (provider: string) => {
-    setIsLoading(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    login(mockUser)
+  const handleDemoLogin = async (role: 'user' | 'translator' | 'admin') => {
+    setLoadingRole(role)
+    await new Promise(resolve => setTimeout(resolve, 900))
+    const userMap = { user: mockUser, translator: mockTranslatorUser, admin: mockAdminUser }
+    const labelMap = { user: 'Foydalanuvchi', translator: 'Tarjimon', admin: 'Admin' }
+    login(userMap[role])
+    setSuccessRole(labelMap[role])
+    setLoadingRole(null)
     setShowSuccess(true)
-    setTimeout(() => { router.push('/') }, 2000)
+    const dest = role === 'admin' ? '/admin' : role === 'translator' ? '/translator' : '/'
+    setTimeout(() => { router.push(dest) }, 1800)
+  }
+
+  const handleSocialLogin = async (provider: string) => {
+    setLoadingRole(provider)
+    await new Promise(resolve => setTimeout(resolve, 900))
+    login(mockUser)
+    setSuccessRole('Foydalanuvchi')
+    setLoadingRole(null)
+    setShowSuccess(true)
+    setTimeout(() => { router.push('/') }, 1800)
   }
 
   const stats = [
@@ -46,9 +70,14 @@ export default function LoginPage() {
     { icon: Star, value: '5K+', label: 'Tarjimonlar' },
   ]
 
+  const demoAccounts = [
+    { role: 'user' as const, label: 'Foydalanuvchi', desc: 'Oddiy akkaunt', color: 'from-primary/20 to-accent/20 border-primary/30 hover:border-primary/60', icon: User, iconColor: 'text-primary' },
+    { role: 'translator' as const, label: 'Tarjimon', desc: 'Tarjimon paneli', color: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/30 hover:border-emerald-500/60', icon: BookOpen, iconColor: 'text-emerald-400' },
+    { role: 'admin' as const, label: 'Admin', desc: 'To\'liq boshqaruv', color: 'from-orange-500/20 to-red-500/20 border-orange-500/30 hover:border-orange-500/60', icon: Shield, iconColor: 'text-orange-400' },
+  ]
+
   return (
     <div className="min-h-screen bg-background flex overflow-hidden">
-      {/* Animated background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <motion.div
           className="absolute w-[600px] h-[600px] rounded-full opacity-20"
@@ -71,7 +100,6 @@ export default function LoginPage() {
           transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
           initial={{ top: '40%', left: '40%' }}
         />
-        {/* Subtle grid */}
         <div
           className="absolute inset-0 opacity-[0.025]"
           style={{
@@ -81,16 +109,14 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* Left Side — Form */}
-      <div className="relative z-10 w-full lg:w-[480px] xl:w-[540px] flex items-center justify-center p-6 lg:p-10">
+      <div className="relative z-10 w-full lg:w-[500px] xl:w-[560px] flex items-center justify-center p-6 lg:p-10 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, x: -40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
-          className="w-full max-w-md"
+          className="w-full max-w-md py-4"
         >
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 mb-8 group w-fit">
+          <Link href="/" className="flex items-center gap-3 mb-7 group w-fit">
             <motion.div
               className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-primary"
               whileHover={{ scale: 1.08, rotate: 5 }}
@@ -104,7 +130,54 @@ export default function LoginPage() {
             </div>
           </Link>
 
-          {/* Heading */}
+          {/* Demo accounts - QUICK TEST */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mb-6 p-4 rounded-2xl bg-secondary/30 border border-border/40"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <motion.div
+                animate={{ scale: [1, 1.15, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Sparkles className="w-4 h-4 text-primary" />
+              </motion.div>
+              <p className="text-xs font-bold text-foreground">Demo akkauntlar — tez kirish</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {demoAccounts.map(acc => (
+                <motion.button
+                  key={acc.role}
+                  onClick={() => handleDemoLogin(acc.role)}
+                  disabled={!!loadingRole || isLoading}
+                  className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl bg-gradient-to-br border transition-all text-center ${acc.color}`}
+                  whileHover={{ scale: 1.04, y: -2 }}
+                  whileTap={{ scale: 0.96 }}
+                >
+                  {loadingRole === acc.role ? (
+                    <motion.div
+                      className="w-5 h-5 border-2 border-current/30 border-t-current rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }}
+                    />
+                  ) : (
+                    <acc.icon className={`w-5 h-5 ${acc.iconColor}`} />
+                  )}
+                  <span className="text-[11px] font-bold leading-tight">{acc.label}</span>
+                  <span className="text-[9px] text-muted-foreground leading-tight">{acc.desc}</span>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+
+          <div className="flex items-center gap-3 mb-5">
+            <div className="flex-1 h-px bg-border/40" />
+            <span className="text-xs text-muted-foreground px-1">yoki o'zingiz kiring</span>
+            <div className="flex-1 h-px bg-border/40" />
+          </div>
+
           <AnimatePresence mode="wait">
             <motion.div
               key={isLogin ? 'login-title' : 'register-title'}
@@ -112,9 +185,9 @@ export default function LoginPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25 }}
-              className="mb-7"
+              className="mb-5"
             >
-              <h1 className="text-3xl font-black mb-1.5 leading-tight">
+              <h1 className="text-2xl font-black mb-1.5 leading-tight">
                 {isLogin ? (
                   <>Xush <span className="text-primary">kelibsiz!</span></>
                 ) : (
@@ -129,8 +202,7 @@ export default function LoginPage() {
             </motion.div>
           </AnimatePresence>
 
-          {/* Toggle Tabs */}
-          <div className="relative flex items-center p-1 rounded-xl bg-secondary/40 border border-border/40 mb-6">
+          <div className="relative flex items-center p-1 rounded-xl bg-secondary/40 border border-border/40 mb-5">
             <motion.div
               className="absolute top-1 bottom-1 rounded-lg bg-primary"
               style={{ width: 'calc(50% - 4px)' }}
@@ -151,16 +223,17 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Social Buttons */}
           <div className="grid grid-cols-2 gap-3 mb-5">
             <motion.button
               onClick={() => handleSocialLogin('google')}
               className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/60 hover:border-border transition-all text-sm font-medium"
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.97 }}
-              disabled={isLoading}
+              disabled={!!loadingRole || isLoading}
             >
-              <Chrome className="w-4 h-4" />
+              {loadingRole === 'google' ? (
+                <motion.div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }} />
+              ) : <Chrome className="w-4 h-4" />}
               <span>Google</span>
             </motion.button>
             <motion.button
@@ -168,21 +241,21 @@ export default function LoginPage() {
               className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/60 hover:border-border transition-all text-sm font-medium"
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.97 }}
-              disabled={isLoading}
+              disabled={!!loadingRole || isLoading}
             >
-              <MessageCircle className="w-4 h-4 text-blue-400" />
+              {loadingRole === 'telegram' ? (
+                <motion.div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }} />
+              ) : <MessageCircle className="w-4 h-4 text-blue-400" />}
               <span>Telegram</span>
             </motion.button>
           </div>
 
-          {/* Divider */}
           <div className="flex items-center gap-3 mb-5">
             <div className="flex-1 h-px bg-border/40" />
             <span className="text-xs text-muted-foreground px-1">yoki email bilan</span>
             <div className="flex-1 h-px bg-border/40" />
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <AnimatePresence>
               {!isLogin && (
@@ -255,7 +328,7 @@ export default function LoginPage() {
               className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold text-sm flex items-center justify-center gap-2 glow-primary mt-1"
               whileHover={{ scale: 1.01, y: -1 }}
               whileTap={{ scale: 0.98 }}
-              disabled={isLoading}
+              disabled={isLoading || !!loadingRole}
             >
               {isLoading ? (
                 <motion.div
@@ -265,8 +338,8 @@ export default function LoginPage() {
                 />
               ) : (
                 <>
+                  <LogIn className="w-4 h-4" />
                   {isLogin ? 'Kirish' : 'Akkaunt yaratish'}
-                  <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </motion.button>
@@ -282,9 +355,8 @@ export default function LoginPage() {
             </p>
           )}
 
-          {/* Bonus Banner */}
           <motion.div
-            className="mt-6 p-4 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 flex items-center gap-3"
+            className="mt-5 p-3.5 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 flex items-center gap-3"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
@@ -305,20 +377,18 @@ export default function LoginPage() {
             </div>
           </motion.div>
 
-          {/* Security badge */}
           <motion.div
             className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
           >
-            <Shield className="w-3.5 h-3.5 text-success" />
+            <Shield className="w-3.5 h-3.5 text-emerald-400" />
             <span>256-bit shifrlash bilan himoyalangan</span>
           </motion.div>
         </motion.div>
       </div>
 
-      {/* Right Side — Visual */}
       <div className="hidden lg:flex flex-1 relative overflow-hidden">
         <div className="absolute inset-0">
           <img
@@ -330,7 +400,6 @@ export default function LoginPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/20" />
         </div>
 
-        {/* Floating manga cards */}
         <div className="absolute inset-0 pointer-events-none">
           {[
             { src: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=200&h=280&fit=crop', left: '62%', top: '12%', rotate: '-8deg', delay: 0 },
@@ -354,7 +423,6 @@ export default function LoginPage() {
           ))}
         </div>
 
-        {/* Content */}
         <div className="relative z-10 flex flex-col justify-end p-12 xl:p-16">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -378,7 +446,6 @@ export default function LoginPage() {
               Millionlab o&apos;quvchilar bilan qo&apos;shiling va o&apos;zingizning sevimli mangangizni toping.
             </p>
 
-            {/* Stats */}
             <div className="flex items-center gap-6 mt-8">
               {stats.map(({ icon: Icon, value, label }, i) => (
                 <motion.div
@@ -397,7 +464,6 @@ export default function LoginPage() {
               ))}
             </div>
 
-            {/* Social proof */}
             <motion.div
               className="mt-8 flex items-center gap-3 p-3 rounded-xl glass border border-border/30 w-fit"
               initial={{ opacity: 0 }}
@@ -426,7 +492,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Success Modal */}
       <AnimatePresence>
         {showSuccess && (
           <motion.div
@@ -465,7 +530,7 @@ export default function LoginPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                Manga UZ ga <span className="text-primary">xush kelibsiz!</span>
+                <span className="text-primary">{successRole}</span> sifatida kirdingiz!
               </motion.h2>
               <motion.p
                 className="text-muted-foreground text-sm mb-6"
@@ -473,7 +538,7 @@ export default function LoginPage() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
               >
-                Muvaffaqiyatli kirdingiz. Bosh sahifaga yo&apos;naltirilmoqda...
+                Muvaffaqiyatli kirdingiz. Yo&apos;naltirilmoqda...
               </motion.p>
 
               <motion.div
@@ -485,7 +550,7 @@ export default function LoginPage() {
                 <motion.div animate={{ rotate: [0, 15, -15, 0] }} transition={{ duration: 1, delay: 0.7 }}>
                   <Diamond className="w-5 h-5 text-yellow-400" />
                 </motion.div>
-                <span className="font-semibold text-sm">+50 ta Olmos bonus!</span>
+                <span className="font-semibold text-sm">Xush kelibsiz, Manga UZ!</span>
               </motion.div>
 
               <motion.div className="mt-5 h-1 rounded-full bg-secondary/50 overflow-hidden">
@@ -493,7 +558,7 @@ export default function LoginPage() {
                   className="h-full bg-gradient-to-r from-primary to-accent"
                   initial={{ width: '0%' }}
                   animate={{ width: '100%' }}
-                  transition={{ duration: 2, ease: 'linear' }}
+                  transition={{ duration: 1.8, ease: 'linear' }}
                 />
               </motion.div>
             </motion.div>

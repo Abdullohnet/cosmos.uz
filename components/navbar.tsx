@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Bell, User, Diamond, Menu, X, Home, BookOpen,
   TrendingUp, Crown, Settings, LogOut, Gift, Sparkles,
-  ChevronDown, Star, Upload, PenLine, ArrowRight, Clock, Flame
+  ChevronDown, Star, Upload, PenLine, ArrowRight, Clock, Flame,
+  Sun, Moon
 } from 'lucide-react'
-import { useUserStore, mockUser, mockMangas } from '@/lib/store'
+import { useUserStore, useUIStore, mockMangas } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -20,8 +22,10 @@ export function Navbar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
-  const { user, isAuthenticated, notifications, markNotificationRead, markAllNotificationsRead, login, logout } = useUserStore()
+  const { user, isAuthenticated, notifications, markNotificationRead, markAllNotificationsRead, logout } = useUserStore()
+  const { theme, setTheme, bannerVisible } = useUIStore()
   const unreadCount = notifications.filter(n => !n.read).length
 
   // Live search results
@@ -66,7 +70,8 @@ export function Navbar() {
         animate={{ y: 0 }}
         transition={{ type: 'spring', stiffness: 260, damping: 22 }}
         className={cn(
-          'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
+          'fixed left-0 right-0 z-50 transition-all duration-300',
+          bannerVisible ? 'top-10' : 'top-0',
           isScrolled ? 'glass-strong py-2' : 'bg-transparent py-4'
         )}
       >
@@ -213,6 +218,25 @@ export function Navbar() {
               <button className="md:hidden p-2 rounded-lg hover:bg-secondary/50 transition-colors">
                 <Search className="w-5 h-5 text-muted-foreground" />
               </button>
+
+              {/* Theme Toggle */}
+              <motion.button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="p-2 rounded-lg hover:bg-secondary/50 transition-colors relative overflow-hidden"
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              >
+                <AnimatePresence mode="wait">
+                  {theme === 'dark' ? (
+                    <motion.div key="sun" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                      <Sun className="w-5 h-5 text-yellow-400" />
+                    </motion.div>
+                  ) : (
+                    <motion.div key="moon" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                      <Moon className="w-5 h-5 text-primary" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.button>
 
               {/* Apply CTA */}
               <Link href="/apply" className="hidden lg:block flex-shrink-0">
@@ -423,14 +447,18 @@ export function Navbar() {
                 </>
               ) : (
                 <div className="flex items-center gap-1.5">
-                  <Button variant="ghost" size="sm" onClick={() => login(mockUser)}
-                    className="text-muted-foreground hover:text-foreground text-xs h-8">
-                    Kirish
-                  </Button>
-                  <Button size="sm" onClick={() => login(mockUser)}
-                    className="bg-gradient-to-r from-primary to-accent text-primary-foreground glow-primary text-xs h-8">
-                    Ro'yxat
-                  </Button>
+                  <Link href="/login">
+                    <Button variant="ghost" size="sm"
+                      className="text-muted-foreground hover:text-foreground text-xs h-8">
+                      Kirish
+                    </Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button size="sm"
+                      className="bg-gradient-to-r from-primary to-accent text-primary-foreground glow-primary text-xs h-8">
+                      Ro&apos;yxat
+                    </Button>
+                  </Link>
                 </div>
               )}
 
