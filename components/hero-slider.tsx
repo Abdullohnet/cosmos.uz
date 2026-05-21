@@ -19,6 +19,19 @@ export function HeroSlider({ mangas }: HeroSliderProps) {
 
   const featuredMangas = mangas.slice(0, 5)
 
+  if (featuredMangas.length === 0) {
+    return (
+      <div className="relative w-full h-[40vh] sm:h-[50vh] flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 border-b border-border/20">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+            <BookOpen className="w-8 h-8 text-primary/40" />
+          </div>
+          <p className="text-muted-foreground text-sm">Manga yuklanmoqda...</p>
+        </div>
+      </div>
+    )
+  }
+
   useEffect(() => {
     intervalRef.current = setInterval(() => {
       setDirection(1)

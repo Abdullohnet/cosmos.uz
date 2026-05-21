@@ -3,10 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Mail, Lock, User, Eye, EyeOff,
-  Sparkles, Diamond, Star, Users, BookOpen, Shield, LogIn
-} from 'lucide-react'
+import { Mail, Lock, User, Eye, EyeOff, Sparkles, Diamond, Star, Users, BookOpen, Shield, LogIn } from 'lucide-react'
 import { useUserStore } from '@/lib/store'
 import { apiLogin, apiRegister } from '@/lib/api'
 import { useRouter } from 'next/navigation'
@@ -18,7 +15,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [loadingRole, setLoadingRole] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [successRole, setSuccessRole] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
@@ -53,47 +49,10 @@ export default function LoginPage() {
     }
   }
 
-  const handleDemoLogin = async (role: 'user' | 'translator' | 'admin') => {
-    setLoadingRole(role)
-    setErrorMsg('')
-    const creds = {
-      user: { email: 'fan@mangauz.com', password: 'demo1234' },
-      translator: { email: 'translator@mangauz.com', password: 'demo1234' },
-      admin: { email: 'admin@mangauz.com', password: 'admin123' },
-    }
-    const labelMap = { user: 'Foydalanuvchi', translator: 'Tarjimon', admin: 'Admin' }
-    try {
-      const { user } = await apiLogin(creds[role].email, creds[role].password)
-      login(user)
-      setSuccessRole(labelMap[role])
-      setLoadingRole(null)
-      setShowSuccess(true)
-      const dest = role === 'admin' ? '/admin' : role === 'translator' ? '/translator' : '/'
-      setTimeout(() => router.push(dest), 1800)
-    } catch {
-      // If API fails (e.g. wrong password), fall back to mock login for demo
-      const { mockUser, mockTranslatorUser, mockAdminUser } = await import('@/lib/store')
-      const userMap = { user: mockUser, translator: mockTranslatorUser, admin: mockAdminUser }
-      login(userMap[role])
-      setSuccessRole(labelMap[role])
-      setLoadingRole(null)
-      setShowSuccess(true)
-      const dest = role === 'admin' ? '/admin' : role === 'translator' ? '/translator' : '/'
-      setTimeout(() => router.push(dest), 1800)
-    }
-  }
-
-
   const stats = [
     { icon: BookOpen, value: '50K+', label: "Manga sarlavhalari" },
     { icon: Users, value: '1M+', label: "Faol o'quvchilar" },
     { icon: Star, value: '5K+', label: 'Tarjimonlar' },
-  ]
-
-  const demoAccounts = [
-    { role: 'user' as const, label: 'Foydalanuvchi', desc: 'Oddiy akkaunt', color: 'from-primary/20 to-accent/20 border-primary/30 hover:border-primary/60', icon: User, iconColor: 'text-primary' },
-    { role: 'translator' as const, label: 'Tarjimon', desc: 'Tarjimon paneli', color: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/30 hover:border-emerald-500/60', icon: BookOpen, iconColor: 'text-emerald-400' },
-    { role: 'admin' as const, label: 'Admin', desc: 'To\'liq boshqaruv', color: 'from-orange-500/20 to-red-500/20 border-orange-500/30 hover:border-orange-500/60', icon: Shield, iconColor: 'text-orange-400' },
   ]
 
   return (
@@ -113,13 +72,6 @@ export default function LoginPage() {
           transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
           initial={{ bottom: '0%', right: '-5%' }}
         />
-        <motion.div
-          className="absolute w-[300px] h-[300px] rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, oklch(0.75 0.2 200) 0%, transparent 70%)', filter: 'blur(60px)' }}
-          animate={{ x: [0, 40, 0], y: [0, -40, 0] }}
-          transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
-          initial={{ top: '40%', left: '40%' }}
-        />
         <div
           className="absolute inset-0 opacity-[0.025]"
           style={{
@@ -136,7 +88,7 @@ export default function LoginPage() {
           transition={{ duration: 0.6 }}
           className="w-full max-w-md py-4"
         >
-          <Link href="/" className="flex items-center gap-3 mb-7 group w-fit">
+          <Link href="/" className="flex items-center gap-3 mb-8 group w-fit">
             <motion.div
               className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-primary"
               whileHover={{ scale: 1.08, rotate: 5 }}
@@ -150,54 +102,6 @@ export default function LoginPage() {
             </div>
           </Link>
 
-          {/* Demo accounts - QUICK TEST */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="mb-6 p-4 rounded-2xl bg-secondary/30 border border-border/40"
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <motion.div
-                animate={{ scale: [1, 1.15, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <Sparkles className="w-4 h-4 text-primary" />
-              </motion.div>
-              <p className="text-xs font-bold text-foreground">Demo akkauntlar — tez kirish</p>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {demoAccounts.map(acc => (
-                <motion.button
-                  key={acc.role}
-                  onClick={() => handleDemoLogin(acc.role)}
-                  disabled={!!loadingRole || isLoading}
-                  className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl bg-gradient-to-br border transition-all text-center ${acc.color}`}
-                  whileHover={{ scale: 1.04, y: -2 }}
-                  whileTap={{ scale: 0.96 }}
-                >
-                  {loadingRole === acc.role ? (
-                    <motion.div
-                      className="w-5 h-5 border-2 border-current/30 border-t-current rounded-full"
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }}
-                    />
-                  ) : (
-                    <acc.icon className={`w-5 h-5 ${acc.iconColor}`} />
-                  )}
-                  <span className="text-[11px] font-bold leading-tight">{acc.label}</span>
-                  <span className="text-[9px] text-muted-foreground leading-tight">{acc.desc}</span>
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
-
-          <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-border/40" />
-            <span className="text-xs text-muted-foreground px-1">yoki o'zingiz kiring</span>
-            <div className="flex-1 h-px bg-border/40" />
-          </div>
-
           <AnimatePresence mode="wait">
             <motion.div
               key={isLogin ? 'login-title' : 'register-title'}
@@ -205,24 +109,24 @@ export default function LoginPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25 }}
-              className="mb-5"
+              className="mb-6"
             >
               <h1 className="text-2xl font-black mb-1.5 leading-tight">
                 {isLogin ? (
                   <>Xush <span className="text-primary">kelibsiz!</span></>
                 ) : (
-                  <>Ro&apos;yxatdan <span className="text-primary">o&apos;ting</span></>
+                  <>Akkaunt <span className="text-primary">yarating</span></>
                 )}
               </h1>
               <p className="text-muted-foreground text-sm">
                 {isLogin
                   ? "Davom etish uchun ma'lumotlaringizni kiriting"
-                  : "Akkaunt yarating va o'qishni boshlang"}
+                  : "Ro'yxatdan o'ting va o'qishni boshlang"}
               </p>
             </motion.div>
           </AnimatePresence>
 
-          <div className="relative flex items-center p-1 rounded-xl bg-secondary/40 border border-border/40 mb-5">
+          <div className="relative flex items-center p-1 rounded-xl bg-secondary/40 border border-border/40 mb-6">
             <motion.div
               className="absolute top-1 bottom-1 rounded-lg bg-primary"
               style={{ width: 'calc(50% - 4px)' }}
@@ -231,20 +135,19 @@ export default function LoginPage() {
             />
             <button
               onClick={() => setIsLogin(true)}
-              className={`relative flex-1 py-2 text-sm font-semibold transition-colors duration-200 z-10 ${isLogin ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`relative flex-1 py-2.5 text-sm font-semibold transition-colors duration-200 z-10 ${isLogin ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Kirish
             </button>
             <button
               onClick={() => setIsLogin(false)}
-              className={`relative flex-1 py-2 text-sm font-semibold transition-colors duration-200 z-10 ${!isLogin ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`relative flex-1 py-2.5 text-sm font-semibold transition-colors duration-200 z-10 ${!isLogin ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Ro&apos;yxatdan o&apos;tish
             </button>
           </div>
 
-
-          <form onSubmit={handleSubmit} className="space-y-3.5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <AnimatePresence>
               {!isLogin && (
                 <motion.div
@@ -260,6 +163,7 @@ export default function LoginPage() {
                       placeholder="Foydalanuvchi nomi"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
+                      autoComplete="username"
                       className="w-full pl-11 pr-4 py-3 rounded-xl bg-secondary/40 border border-border/40 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all"
                       required={!isLogin}
                     />
@@ -275,6 +179,7 @@ export default function LoginPage() {
                 placeholder="Email manzil"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
                 className="w-full pl-11 pr-4 py-3 rounded-xl bg-secondary/40 border border-border/40 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all"
                 required
               />
@@ -287,6 +192,7 @@ export default function LoginPage() {
                 placeholder="Parol"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
                 className="w-full pl-11 pr-12 py-3 rounded-xl bg-secondary/40 border border-border/40 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all"
                 required
               />
@@ -299,33 +205,35 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {errorMsg && (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-medium"
-              >
-                <span>⚠️</span> {errorMsg}
-              </motion.div>
-            )}
+            <AnimatePresence>
+              {errorMsg && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-medium"
+                >
+                  <span>⚠️</span> {errorMsg}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {isLogin && (
-              <div className="flex items-center justify-between text-sm pt-0.5">
+              <div className="flex items-center justify-between text-sm">
                 <label className="flex items-center gap-2 cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
                   <input type="checkbox" className="rounded border-border/50 w-3.5 h-3.5" />
                   <span className="text-xs">Eslab qolish</span>
                 </label>
-                <Link href="/forgot-password" className="text-primary hover:underline text-xs">
+                <button type="button" className="text-primary hover:underline text-xs">
                   Parolni unutdingizmi?
-                </Link>
+                </button>
               </div>
             )}
 
             <motion.button
               type="submit"
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold text-sm flex items-center justify-center gap-2 glow-primary mt-1"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold text-sm flex items-center justify-center gap-2 glow-primary"
               whileHover={{ scale: 1.01, y: -1 }}
               whileTap={{ scale: 0.98 }}
-              disabled={isLoading || !!loadingRole}
+              disabled={isLoading}
             >
               {isLoading ? (
                 <motion.div
@@ -353,10 +261,10 @@ export default function LoginPage() {
           )}
 
           <motion.div
-            className="mt-5 p-3.5 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 flex items-center gap-3"
+            className="mt-6 p-3.5 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 flex items-center gap-3"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
+            transition={{ delay: 0.4 }}
             whileHover={{ scale: 1.01 }}
           >
             <motion.div
@@ -378,7 +286,7 @@ export default function LoginPage() {
             className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
+            transition={{ delay: 0.6 }}
           >
             <Shield className="w-3.5 h-3.5 text-emerald-400" />
             <span>256-bit shifrlash bilan himoyalangan</span>
@@ -440,7 +348,7 @@ export default function LoginPage() {
               <span className="text-primary">dunyosiga</span> kiring
             </h2>
             <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
-              Millionlab o&apos;quvchilar bilan qo&apos;shiling va o&apos;zingizning sevimli mangangizni toping.
+              O&apos;zbek tilida manga va manhwa o&apos;qing. Tarjimonlar jamoasiga qo&apos;shiling.
             </p>
 
             <div className="flex items-center gap-6 mt-8">
@@ -460,31 +368,6 @@ export default function LoginPage() {
                 </motion.div>
               ))}
             </div>
-
-            <motion.div
-              className="mt-8 flex items-center gap-3 p-3 rounded-xl glass border border-border/30 w-fit"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.1 }}
-            >
-              <div className="flex -space-x-2">
-                {[
-                  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&h=40&fit=crop',
-                  'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=40&h=40&fit=crop',
-                  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=40&h=40&fit=crop'
-                ].map((src, i) => (
-                  <img key={i} src={src} className="w-7 h-7 rounded-full border-2 border-background object-cover" alt="" />
-                ))}
-              </div>
-              <div>
-                <div className="flex items-center gap-0.5 mb-0.5">
-                  {[1,2,3,4,5].map(i => (
-                    <Star key={i} className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">1000+ foydalanuvchi baho berdi</p>
-              </div>
-            </motion.div>
           </motion.div>
         </div>
       </div>
@@ -505,13 +388,6 @@ export default function LoginPage() {
               className="relative glass-strong rounded-2xl p-8 max-w-sm text-center mx-4 border border-primary/20"
             >
               <motion.div
-                className="absolute inset-0 rounded-2xl pointer-events-none"
-                style={{ boxShadow: '0 0 60px oklch(0.6 0.25 280 / 0.3)' }}
-                animate={{ opacity: [0.5, 1, 0.5] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              />
-
-              <motion.div
                 className="w-20 h-20 mx-auto mb-5 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/30 flex items-center justify-center"
                 animate={{ scale: [1, 1.08, 1] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
@@ -520,37 +396,11 @@ export default function LoginPage() {
                   <Sparkles className="w-9 h-9 text-primary" />
                 </motion.div>
               </motion.div>
-
-              <motion.h2
-                className="text-2xl font-black mb-2"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
+              <h2 className="text-2xl font-black mb-2">
                 <span className="text-primary">{successRole}</span> sifatida kirdingiz!
-              </motion.h2>
-              <motion.p
-                className="text-muted-foreground text-sm mb-6"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-              >
-                Muvaffaqiyatli kirdingiz. Yo&apos;naltirilmoqda...
-              </motion.p>
-
-              <motion.div
-                className="flex items-center justify-center gap-2 p-3 rounded-xl bg-yellow-500/15 border border-yellow-500/25"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 }}
-              >
-                <motion.div animate={{ rotate: [0, 15, -15, 0] }} transition={{ duration: 1, delay: 0.7 }}>
-                  <Diamond className="w-5 h-5 text-yellow-400" />
-                </motion.div>
-                <span className="font-semibold text-sm">Xush kelibsiz, Manga UZ!</span>
-              </motion.div>
-
-              <motion.div className="mt-5 h-1 rounded-full bg-secondary/50 overflow-hidden">
+              </h2>
+              <p className="text-muted-foreground text-sm mb-6">Muvaffaqiyatli kirdingiz. Yo&apos;naltirilmoqda...</p>
+              <motion.div className="mt-4 h-1 rounded-full bg-secondary/50 overflow-hidden">
                 <motion.div
                   className="h-full bg-gradient-to-r from-primary to-accent"
                   initial={{ width: '0%' }}
