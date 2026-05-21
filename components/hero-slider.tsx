@@ -114,7 +114,7 @@ export function HeroSlider({ mangas }: HeroSliderProps) {
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-3 sm:px-4 h-full flex items-center">
-        <div className="grid lg:grid-cols-2 gap-4 lg:gap-8 items-center w-full">
+        <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 lg:gap-8 items-center w-full">
           {/* Info */}
           <AnimatePresence mode="wait">
             <motion.div
@@ -209,7 +209,7 @@ export function HeroSlider({ mangas }: HeroSliderProps) {
           </AnimatePresence>
 
           {/* Cover */}
-          <div className="hidden lg:flex justify-end">
+          <div className="flex justify-center lg:justify-end">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentIndex}
@@ -219,7 +219,7 @@ export function HeroSlider({ mangas }: HeroSliderProps) {
                 transition={{ duration: 0.4 }}
                 className="relative"
               >
-                <div className="relative w-52 aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl glow-primary">
+                <div className="relative w-32 sm:w-40 lg:w-52 aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl glow-primary">
                   <img
                     src={currentManga.cover}
                     alt={currentManga.title}
