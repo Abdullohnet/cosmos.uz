@@ -27,11 +27,20 @@ export async function POST(req: NextRequest) {
     }
 
     const hash = await bcrypt.hash(password, 12)
-    const [user] = await query<{ id: string; username: string; email: string; role: string }>(
-      `INSERT INTO users (username, email, password_hash, avatar)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, username, email, role`,
-      [username, email.toLowerCase(), hash, `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`]
+    const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
+
+    const [user] = await query<{
+      id: string; username: string; email: string; role: string
+      subscription: string; level: number; xp: number; xp_to_next_level: number
+      diamonds: number; avatar: string; bio: string; followers: number; following: number
+      chapters_read: number; time_spent: number; manga_completed: number; created_at: string
+    }>(
+      `INSERT INTO users (username, email, password_hash, avatar, diamonds)
+       VALUES ($1, $2, $3, $4, 50)
+       RETURNING id, username, email, role, subscription, level, xp, xp_to_next_level,
+                 diamonds, avatar, bio, followers, following,
+                 chapters_read, time_spent, manga_completed, created_at`,
+      [username, email.toLowerCase(), hash, avatar]
     )
 
     const token = await signToken({ userId: user.id, username: user.username, role: user.role, email: user.email })
@@ -44,7 +53,14 @@ export async function POST(req: NextRequest) {
       path: '/',
     })
 
-    return apiSuccess({ user: { id: user.id, username: user.username, email: user.email, role: user.role } }, 201)
+    // Send welcome notification
+    await queryOne(
+      `INSERT INTO notifications (user_id, type, title, message)
+       VALUES ($1, 'system', 'MangaUZ ga xush kelibsiz! 🎉', 'Ro''yxatdan o''tganingiz uchun 50 ta olmos sovg''a!')`,
+      [user.id]
+    ).catch(() => {})
+
+    return apiSuccess({ user }, 201)
   } catch (err) {
     console.error(err)
     return apiError('Server xatosi', 500)

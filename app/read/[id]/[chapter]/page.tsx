@@ -101,6 +101,21 @@ export default function ReaderPage() {
     if (isAuthenticated) {
       gainXP(5)
       apiSaveProgress(manga.id, chapterNumber)
+      // Sync XP to DB
+      const stored = localStorage.getItem('manga-uz-user')
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          const uid = parsed?.state?.user?.id
+          if (uid) {
+            fetch(`/api/users/${uid}/xp`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ amount: 5 }),
+            }).catch(() => {})
+          }
+        } catch {}
+      }
     }
   }, [chapterNumber, manga?.id, isAuthenticated])
 

@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AuthInitializer } from '@/components/auth-initializer'
+import { DbInitializer } from '@/components/db-initializer'
 import { MobileBottomNav } from '@/components/mobile-bottom-nav'
 import { BackToTop } from '@/components/back-to-top'
 import { ToastContainer } from '@/components/toast'
@@ -68,6 +69,7 @@ export default function RootLayout({
       <body className="font-sans antialiased min-h-screen pb-16 lg:pb-0">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="manga-uz-theme">
           <AuthInitializer />
+          <DbInitializer />
           <AnnouncementBanner />
           {children}
           <MobileBottomNav />

@@ -42,8 +42,20 @@ export default function ShopPage() {
     // Simulate payment processing
     await new Promise(resolve => setTimeout(resolve, 2000))
     
-    // Add diamonds
-    addDiamonds(pack.diamonds + pack.bonusDiamonds)
+    const totalDiamonds = pack.diamonds + pack.bonusDiamonds
+    
+    // Add diamonds to local store
+    addDiamonds(totalDiamonds)
+
+    // Sync diamonds to DB
+    if (user) {
+      fetch(`/api/users/${user.id}/diamonds`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: totalDiamonds, type: 'purchase', description: pack.name }),
+      }).catch(() => {})
+    }
+
     setPurchasedPack(pack)
     setShowSuccess(true)
     setIsProcessing(false)

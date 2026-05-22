@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
@@ -8,7 +8,7 @@ import {
   Star, Eye, BookOpen, Heart, Share2, Flag,
   ChevronDown, ChevronRight, Play, Diamond, Lock, Crown,
   MessageCircle, Users, Calendar, ArrowLeft, Sparkles,
-  Check, TrendingUp, Zap
+  Check, TrendingUp, Zap, Send, Trash2
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
@@ -18,6 +18,17 @@ import { useMangaStore, useUserStore } from '@/lib/store'
 import { apiGetManga, apiGetMangas, apiToggleBookmark, apiRateManga } from '@/lib/api'
 import { useToast } from '@/components/toast'
 import { cn } from '@/lib/utils'
+
+interface Comment {
+  id: string
+  content: string
+  likes_count: number
+  created_at: string
+  user_id: string
+  username: string
+  avatar: string
+  user_liked: boolean
+}
 
 export default function MangaDetailPage() {
   const params = useParams()
@@ -36,6 +47,14 @@ export default function MangaDetailPage() {
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [loading, setLoading] = useState(true)
   const [userProgress, setUserProgress] = useState<number | null>(null)
+
+  // Comments state
+  const [comments, setComments] = useState<Comment[]>([])
+  const [commentsLoading, setCommentsLoading] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [commentSending, setCommentSending] = useState(false)
+  const [totalComments, setTotalComments] = useState(0)
+  const commentInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!params.id) return
@@ -63,6 +82,74 @@ export default function MangaDetailPage() {
       setRelatedManga(list.manga.filter(m => m.id !== id).slice(0, 6))
     }).catch(() => {}).finally(() => setLoading(false))
   }, [params.id])
+
+  // Load comments when tab switches to comments
+  useEffect(() => {
+    if (activeTab !== 'comments' || !params.id) return
+    setCommentsLoading(true)
+    fetch(`/api/manga/${params.id}/comments?limit=30`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.comments) setComments(data.comments)
+        if (data.pagination) setTotalComments(data.pagination.total)
+      })
+      .catch(() => {})
+      .finally(() => setCommentsLoading(false))
+  }, [activeTab, params.id])
+
+  const handleCommentSubmit = async () => {
+    if (!user) { show('Izoh yozish uchun kiring', 'info'); return }
+    if (!commentText.trim()) return
+    setCommentSending(true)
+    try {
+      const res = await fetch(`/api/manga/${params.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: commentText.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Xato')
+      setComments(prev => [data.comment, ...prev])
+      setTotalComments(prev => prev + 1)
+      setCommentText('')
+      show('Izoh qo\'shildi! +2 XP 🎉', 'success')
+    } catch (e: any) {
+      show(e.message || 'Xato yuz berdi', 'error')
+    } finally {
+      setCommentSending(false)
+    }
+  }
+
+  const handleCommentLike = async (commentId: string) => {
+    if (!user) { show('Layk bosish uchun kiring', 'info'); return }
+    try {
+      const res = await fetch(`/api/comments/${commentId}/like`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setComments(prev => prev.map(c =>
+        c.id === commentId ? { ...c, user_liked: data.liked, likes_count: data.likes_count } : c
+      ))
+    } catch {}
+  }
+
+  const handleCommentDelete = async (commentId: string) => {
+    try {
+      const res = await fetch(`/api/manga/${params.id}/comments?comment_id=${commentId}`, { method: 'DELETE' })
+      if (!res.ok) return
+      setComments(prev => prev.filter(c => c.id !== commentId))
+      setTotalComments(prev => Math.max(0, prev - 1))
+      show('Izoh o\'chirildi', 'info')
+    } catch {}
+  }
+
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr)
+    const diff = (Date.now() - d.getTime()) / 1000
+    if (diff < 60) return 'Hozirgina'
+    if (diff < 3600) return `${Math.floor(diff / 60)} daqiqa oldin`
+    if (diff < 86400) return `${Math.floor(diff / 3600)} soat oldin`
+    return `${Math.floor(diff / 86400)} kun oldin`
+  }
 
   const isFav = manga ? (isBookmarked || favorites.includes(manga.id)) : false
 
@@ -119,7 +206,7 @@ export default function MangaDetailPage() {
 
   const tabs = [
     { id: 'chapters', label: 'Boblar', icon: BookOpen, count: manga.chapters },
-    { id: 'comments', label: 'Izohlar', icon: MessageCircle, count: '2.4K' },
+    { id: 'comments', label: 'Izohlar', icon: MessageCircle, count: totalComments || '...' },
   ] as const
 
   return (
@@ -416,53 +503,97 @@ export default function MangaDetailPage() {
               {activeTab === 'comments' && (
                 <motion.div key="comments"
                   initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }}>
-                  {/* Mock comments */}
                   <div className="space-y-3">
-                    {[
-                      { name: 'MangaFan', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60', text: 'Bu manga juda zo\'r! Har bir bob yangi hayajon olib keladi 🔥', time: '2 soat oldin', likes: 42 },
-                      { name: 'OtakuMaster', avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=60', text: 'Tarjimon ajoyib ish qilmoqda, sifat zo\'r 👏', time: '5 soat oldin', likes: 28 },
-                      { name: 'ReadingNinja', avatar: 'https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=60', text: 'Keyingi bobni kutolmayman!!!', time: '1 kun oldin', likes: 15 },
-                    ].map((c, i) => (
-                      <motion.div key={i}
-                        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-                        className="glass rounded-xl p-4 border border-border/20">
-                        <div className="flex items-start gap-3">
-                          <img src={c.avatar} alt={c.name} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm font-bold">{c.name}</span>
-                              <span className="text-[10px] text-muted-foreground">{c.time}</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground">{c.text}</p>
-                            <div className="flex items-center gap-3 mt-2">
-                              <button className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-red-400 transition-colors">
-                                <Heart className="w-3 h-3" />{c.likes}
-                              </button>
-                              <button className="text-[11px] text-muted-foreground hover:text-primary transition-colors">Javob berish</button>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
 
                     {/* Comment input */}
                     <div className="glass rounded-xl p-4 border border-border/20">
                       <div className="flex gap-3">
-                        <div className="w-9 h-9 rounded-full bg-secondary flex-shrink-0 flex items-center justify-center">
-                          <Users className="w-4 h-4 text-muted-foreground" />
-                        </div>
+                        {user ? (
+                          <img src={user.avatar} alt={user.username}
+                            className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-secondary flex-shrink-0 flex items-center justify-center">
+                            <Users className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        )}
                         <div className="flex-1">
-                          <input type="text" placeholder="Izoh yozing..."
-                            className="w-full bg-secondary/50 border border-border/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all" />
-                          <div className="flex justify-end mt-2">
-                            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                              className="px-4 py-1.5 rounded-lg bg-primary/20 text-primary text-xs font-bold hover:bg-primary/30 transition-colors">
-                              Yuborish
+                          <input
+                            ref={commentInputRef}
+                            type="text"
+                            value={commentText}
+                            onChange={e => setCommentText(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleCommentSubmit()}
+                            placeholder={user ? 'Izoh yozing... (Enter yuboring)' : 'Izoh yozish uchun kiring'}
+                            disabled={!user || commentSending}
+                            maxLength={1000}
+                            className="w-full bg-secondary/50 border border-border/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all disabled:opacity-50"
+                          />
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-[10px] text-muted-foreground">{commentText.length}/1000</span>
+                            <motion.button
+                              whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                              onClick={handleCommentSubmit}
+                              disabled={!user || !commentText.trim() || commentSending}
+                              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-primary/20 text-primary text-xs font-bold hover:bg-primary/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                              <Send className="w-3 h-3" />
+                              {commentSending ? 'Yuborilmoqda...' : 'Yuborish'}
                             </motion.button>
                           </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Comments list */}
+                    {commentsLoading ? (
+                      <div className="flex justify-center py-8">
+                        <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                      </div>
+                    ) : comments.length === 0 ? (
+                      <div className="glass rounded-xl p-8 border border-border/20 text-center">
+                        <MessageCircle className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">Hali izoh yo'q. Birinchi bo'lib yozing!</p>
+                      </div>
+                    ) : (
+                      comments.map((c, i) => (
+                        <motion.div key={c.id}
+                          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                          className="glass rounded-xl p-4 border border-border/20">
+                          <div className="flex items-start gap-3">
+                            <img
+                              src={c.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.username}`}
+                              alt={c.username}
+                              className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <span className="text-sm font-bold">{c.username}</span>
+                                <span className="text-[10px] text-muted-foreground">{formatTime(c.created_at)}</span>
+                              </div>
+                              <p className="text-sm text-muted-foreground break-words">{c.content}</p>
+                              <div className="flex items-center gap-3 mt-2">
+                                <motion.button
+                                  whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                  onClick={() => handleCommentLike(c.id)}
+                                  className={cn('flex items-center gap-1 text-[11px] transition-colors',
+                                    c.user_liked ? 'text-red-400' : 'text-muted-foreground hover:text-red-400')}>
+                                  <Heart className={cn('w-3 h-3', c.user_liked && 'fill-current')} />
+                                  {c.likes_count}
+                                </motion.button>
+                                {(user?.id === c.user_id || user?.role === 'admin') && (
+                                  <motion.button
+                                    whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                    onClick={() => handleCommentDelete(c.id)}
+                                    className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-red-400 transition-colors">
+                                    <Trash2 className="w-3 h-3" />
+                                    O'chirish
+                                  </motion.button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))
+                    )}
                   </div>
                 </motion.div>
               )}
