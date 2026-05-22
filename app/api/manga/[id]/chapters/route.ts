@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { pool, query, queryOne } from '@/lib/db'
-import { requireRole, apiError, apiSuccess } from '@/lib/auth'
+import { requireAuth, apiError, apiSuccess } from '@/lib/auth'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -28,10 +28,17 @@ export async function POST(req: NextRequest, { params }: Params) {
   const client = await pool.connect()
   try {
     const { id } = await params
-    await requireRole('translator')
+    const auth = await requireAuth()
+
+    if (auth.role !== 'admin') {
+      if (auth.role !== 'translator') return apiError('Ruxsat yo\'q', 403)
+      const manga = await queryOne<{ translator_id: string }>('SELECT translator_id FROM manga WHERE id=$1', [id])
+      if (!manga) return apiError('Manga topilmadi', 404)
+      if (manga.translator_id !== auth.userId) return apiError('Bu manga sizga tegishli emas', 403)
+    }
 
     const { number, title, pages, is_premium } = await req.json()
-    if (!number) return apiError('Bob raqami kiritilishi shart')
+    if (number == null) return apiError('Bob raqami kiritilishi shart')
 
     await client.query('BEGIN')
 
@@ -45,7 +52,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const chapter = chapterRes.rows[0]
 
     if (pages?.length) {
-      await client.query(`DELETE FROM chapter_pages WHERE chapter_id = $1`, [chapter.id])
+      await client.query('DELETE FROM chapter_pages WHERE chapter_id = $1', [chapter.id])
       for (let i = 0; i < pages.length; i++) {
         await client.query(
           'INSERT INTO chapter_pages (chapter_id, page_number, image_url) VALUES ($1,$2,$3)',
@@ -60,7 +67,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     )
 
     await client.query('COMMIT')
-
     return apiSuccess({ id: chapter.id, message: 'Bob qo\'shildi' }, 201)
   } catch (err: unknown) {
     await client.query('ROLLBACK')

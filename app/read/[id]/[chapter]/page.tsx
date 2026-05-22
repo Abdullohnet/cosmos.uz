@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { useUIStore, useMangaStore, useUserStore } from '@/lib/store'
 import type { Manga } from '@/lib/store'
-import { apiGetManga } from '@/lib/api'
+import { apiGetManga, apiSaveProgress } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 export default function ReaderPage() {
@@ -98,8 +98,11 @@ export default function ReaderPage() {
   useEffect(() => {
     if (!manga) return
     updateProgress(manga.id, chapterNumber)
-    if (isAuthenticated) gainXP(5)
-  }, [chapterNumber, manga?.id, updateProgress, gainXP, isAuthenticated])
+    if (isAuthenticated) {
+      gainXP(5)
+      apiSaveProgress(manga.id, chapterNumber)
+    }
+  }, [chapterNumber, manga?.id, isAuthenticated])
 
   useEffect(() => {
     let timeout: NodeJS.Timeout

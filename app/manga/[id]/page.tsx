@@ -15,7 +15,7 @@ import { Footer } from '@/components/footer'
 import { ParticlesBackground } from '@/components/particles'
 import { MangaCard } from '@/components/manga-card'
 import { useMangaStore, useUserStore } from '@/lib/store'
-import { apiGetManga, apiGetMangas, apiToggleBookmark } from '@/lib/api'
+import { apiGetManga, apiGetMangas, apiToggleBookmark, apiRateManga } from '@/lib/api'
 import { useToast } from '@/components/toast'
 import { cn } from '@/lib/utils'
 
@@ -35,6 +35,7 @@ export default function MangaDetailPage() {
   const [relatedManga, setRelatedManga] = useState<import('@/lib/store').Manga[]>([])
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [userProgress, setUserProgress] = useState<number | null>(null)
 
   useEffect(() => {
     if (!params.id) return
@@ -46,23 +47,18 @@ export default function MangaDetailPage() {
       setManga(detail.manga)
       setIsBookmarked(detail.isBookmarked)
       if (detail.userRating) setUserRating(detail.userRating)
-      const apiChapters = (detail.chapters as any[]).length > 0
-        ? (detail.chapters as any[]).map((ch: any, i: number) => ({
-            id: ch.id,
-            number: ch.chapter_number,
-            title: ch.title || `${ch.chapter_number}-bob`,
-            isPremium: ch.is_premium,
-            price: ch.price || 0,
-            publishedAt: new Date(ch.created_at).toLocaleDateString('uz-UZ'),
-            views: ch.views || 0,
-          }))
-        : Array.from({ length: Math.min(detail.manga.chapters, 50) }, (_, i) => ({
-            id: `ch-${i+1}`, number: detail.manga.chapters - i,
-            title: `${detail.manga.chapters - i}-bob`, isPremium: i < 3,
-            price: i < 3 ? 10 : 0,
-            publishedAt: new Date(Date.now() - i * 86400000 * 3).toLocaleDateString('uz-UZ'),
-            views: 10000,
-          }))
+      if (detail.userProgress) setUserProgress(detail.userProgress)
+      const apiChapters = (detail.chapters as any[]).map((ch: any) => ({
+        id: ch.id,
+        number: ch.number,
+        title: ch.title || `${ch.number}-bob`,
+        isPremium: ch.is_premium,
+        price: 0,
+        publishedAt: ch.published_at
+          ? new Date(ch.published_at).toLocaleDateString('uz-UZ')
+          : '',
+        views: ch.views || 0,
+      }))
       setChapters(apiChapters)
       setRelatedManga(list.manga.filter(m => m.id !== id).slice(0, 6))
     }).catch(() => {}).finally(() => setLoading(false))
@@ -101,9 +97,17 @@ export default function MangaDetailPage() {
     }
   }
 
-  const handleRating = (r: number) => {
+  const handleRating = async (r: number) => {
+    if (!user) { show('Baho berish uchun kiring', 'info'); return }
+    if (!manga) return
     setUserRating(r)
-    show(`${r} yulduz baho berdingiz! ⭐`, 'success')
+    try {
+      const result = await apiRateManga(manga.id, r)
+      setManga(prev => prev ? { ...prev, rating: result.avgRating } : prev)
+      show(`${r} yulduz baho berdingiz! Umumiy: ${result.avgRating.toFixed(1)}/5 ⭐`, 'success')
+    } catch {
+      show('Baho yuborishda xato', 'error')
+    }
   }
 
   const statusMap: Record<string, { label: string; color: string; dot: string }> = {
@@ -270,13 +274,32 @@ export default function MangaDetailPage() {
 
               {/* Actions */}
               <div className="flex flex-wrap items-center gap-2.5">
-                <Link href={`/read/${manga.id}/1`}>
-                  <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary to-accent text-white font-bold glow-primary text-sm">
-                    <Play className="w-4 h-4 fill-current" />
-                    O'qishni boshlash
-                  </motion.button>
-                </Link>
+                {userProgress ? (
+                  <Link href={`/read/${manga.id}/${userProgress}`}>
+                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary to-accent text-white font-bold glow-primary text-sm">
+                      <Play className="w-4 h-4 fill-current" />
+                      Davom ettirish ({userProgress}-bob)
+                    </motion.button>
+                  </Link>
+                ) : (
+                  <Link href={`/read/${manga.id}/${chapters.length > 0 ? chapters[chapters.length - 1].number : 1}`}>
+                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary to-accent text-white font-bold glow-primary text-sm">
+                      <Play className="w-4 h-4 fill-current" />
+                      O'qishni boshlash
+                    </motion.button>
+                  </Link>
+                )}
+                {userProgress && (
+                  <Link href={`/read/${manga.id}/${chapters.length > 0 ? chapters[chapters.length - 1].number : 1}`}>
+                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border/50 hover:bg-secondary/60 text-sm font-medium transition-colors">
+                      <Play className="w-4 h-4" />
+                      Boshidan
+                    </motion.button>
+                  </Link>
+                )}
                 <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }}
                   onClick={handleFavorite}
                   className={cn('flex items-center gap-2 px-4 py-2.5 rounded-xl border font-semibold text-sm transition-colors',

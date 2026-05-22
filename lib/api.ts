@@ -147,6 +147,7 @@ export async function apiGetManga(id: string): Promise<{
   chapters: unknown[]
   isBookmarked: boolean
   userRating: number | null
+  userProgress: number | null
 }> {
   const res = await fetch(`/api/manga/${id}`)
   const data = await res.json()
@@ -156,6 +157,7 @@ export async function apiGetManga(id: string): Promise<{
     chapters: data.chapters,
     isBookmarked: data.isBookmarked,
     userRating: data.userRating,
+    userProgress: data.userProgress ?? null,
   }
 }
 
@@ -273,4 +275,44 @@ export async function apiGetTranslatorEarnings() {
   const data = await res.json()
   if (!res.ok) return null
   return data
+}
+
+// ──────────────────────── RATINGS ────────────────────────
+
+export async function apiRateManga(
+  mangaId: string,
+  score: number
+): Promise<{ score: number; avgRating: number; ratingCount: number }> {
+  const res = await fetch(`/api/manga/${mangaId}/ratings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ score }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Reyting yuborishda xato')
+  return data
+}
+
+// ──────────────────────── PROGRESS ────────────────────────
+
+export async function apiGetProgress(mangaId?: string): Promise<{
+  progress: { chapter_number: number; updated_at: string; manga_id?: string; title?: string; cover?: string; chapters_count?: number } | null
+} | { progress: Array<{ manga_id: string; chapter_number: number; updated_at: string; title: string; cover: string; chapters_count: number }> }> {
+  const url = mangaId ? `/api/progress?manga_id=${mangaId}` : '/api/progress'
+  const res = await fetch(url)
+  const data = await res.json()
+  if (!res.ok) return { progress: null }
+  return data
+}
+
+export async function apiSaveProgress(mangaId: string, chapterNumber: number): Promise<void> {
+  try {
+    await fetch('/api/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ manga_id: mangaId, chapter_number: chapterNumber }),
+    })
+  } catch {
+    // Progress save is non-critical, silently fail
+  }
 }

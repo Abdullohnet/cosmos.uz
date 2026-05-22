@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { query, queryOne } from '@/lib/db'
-import { getAuthUser, requireRole, apiError, apiSuccess } from '@/lib/auth'
+import { getAuthUser, requireAuth, requireRole, apiError, apiSuccess } from '@/lib/auth'
+import { cookies } from 'next/headers'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -19,7 +20,12 @@ export async function GET(_req: NextRequest, { params }: Params) {
     )
     if (!manga) return apiError('Manga topilmadi', 404)
 
-    await queryOne('UPDATE manga SET views = views + 1 WHERE id = $1', [id])
+    const cookieStore = await cookies()
+    const viewKey = `vw_${id.replace(/-/g, '').slice(0, 12)}`
+    const alreadyViewed = !!cookieStore.get(viewKey)
+    if (!alreadyViewed) {
+      await queryOne('UPDATE manga SET views = views + 1 WHERE id = $1', [id])
+    }
 
     const chapters = await query(
       'SELECT id, number, title, views, is_premium, published_at FROM chapters WHERE manga_id = $1 ORDER BY number DESC',
@@ -29,14 +35,24 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const auth = await getAuthUser()
     let isBookmarked = false
     let userRating = null
+    let userProgress = null
     if (auth) {
-      const bm = await queryOne('SELECT 1 FROM bookmarks WHERE user_id=$1 AND manga_id=$2', [auth.userId, id])
+      const [bm, rt, pr] = await Promise.all([
+        queryOne('SELECT 1 FROM bookmarks WHERE user_id=$1 AND manga_id=$2', [auth.userId, id]),
+        queryOne<{ score: number }>('SELECT score FROM ratings WHERE user_id=$1 AND manga_id=$2', [auth.userId, id]),
+        queryOne<{ chapter_number: number }>('SELECT chapter_number FROM reading_progress WHERE user_id=$1 AND manga_id=$2', [auth.userId, id]),
+      ])
       isBookmarked = !!bm
-      const rt = await queryOne<{ score: number }>('SELECT score FROM ratings WHERE user_id=$1 AND manga_id=$2', [auth.userId, id])
       userRating = rt?.score ?? null
+      userProgress = pr?.chapter_number ?? null
     }
 
-    return apiSuccess({ manga, chapters, isBookmarked, userRating })
+    const body = JSON.stringify({ manga, chapters, isBookmarked, userRating, userProgress })
+    const headers = new Headers({ 'Content-Type': 'application/json' })
+    if (!alreadyViewed) {
+      headers.append('Set-Cookie', `${viewKey}=1; Max-Age=3600; Path=/; HttpOnly; SameSite=Lax`)
+    }
+    return new Response(body, { status: 200, headers })
   } catch (err) {
     console.error(err)
     return apiError('Server xatosi', 500)
@@ -46,7 +62,16 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params
-    await requireRole('translator')
+    const auth = await requireAuth()
+
+    if (auth.role === 'translator') {
+      const manga = await queryOne<{ translator_id: string }>('SELECT translator_id FROM manga WHERE id=$1', [id])
+      if (!manga) return apiError('Manga topilmadi', 404)
+      if (manga.translator_id !== auth.userId) return apiError('Bu manga sizga tegishli emas', 403)
+    } else if (auth.role !== 'admin') {
+      return apiError('Ruxsat yo\'q', 403)
+    }
+
     const body = await req.json()
     const { title, cover, description, author, artist, status, is_premium } = body
 
@@ -61,6 +86,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return apiSuccess({ message: 'Manga yangilandi' })
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'Unauthorized') return apiError('Avtorizatsiya talab qilinadi', 401)
+    if (err instanceof Error && err.message === 'Forbidden') return apiError('Ruxsat yo\'q', 403)
     console.error(err)
     return apiError('Server xatosi', 500)
   }
@@ -70,6 +96,8 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const { id } = await params
     await requireRole('admin')
+    const manga = await queryOne('SELECT id FROM manga WHERE id=$1', [id])
+    if (!manga) return apiError('Manga topilmadi', 404)
     await queryOne('DELETE FROM manga WHERE id=$1', [id])
     return apiSuccess({ message: 'Manga o\'chirildi' })
   } catch (err: unknown) {

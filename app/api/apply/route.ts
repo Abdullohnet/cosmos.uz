@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { query, queryOne } from '@/lib/db'
+import { queryOne, query } from '@/lib/db'
 import { apiError, apiSuccess } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
@@ -50,14 +50,3 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
-  try {
-    const apps = await query(
-      'SELECT * FROM translator_applications ORDER BY created_at DESC'
-    )
-    return apiSuccess({ applications: apps })
-  } catch (err) {
-    console.error(err)
-    return apiError('Server xatosi', 500)
-  }
-}

@@ -15,7 +15,8 @@ import { ParticlesBackground, FloatingOrbs } from '@/components/particles'
 import { Button } from '@/components/ui/button'
 import { useUserStore, useMangaStore } from '@/lib/store'
 import type { Manga } from '@/lib/store'
-import { apiGetBookmarks, apiGetMangas } from '@/lib/api'
+import { apiGetBookmarks } from '@/lib/api'
+import { useToast } from '@/components/toast'
 import { MangaCard } from '@/components/manga-card'
 import { cn } from '@/lib/utils'
 
@@ -38,25 +39,53 @@ const recentActivity = [
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<Tab>('overview')
-  const { user, isAuthenticated } = useUserStore()
+  const { user, isAuthenticated, updateUser } = useUserStore()
   const { favorites } = useMangaStore()
+  const { show } = useToast()
   const [libraryMangas, setLibraryMangas] = useState<Manga[]>([])
   const [favoriteMangas, setFavoriteMangas] = useState<Manga[]>([])
-  const [recentlyRead, setRecentlyRead] = useState<Manga[]>([])
-
-  useEffect(() => {
-    apiGetMangas({ limit: 8, sort: 'views' }).then(({ manga }) => {
-      setLibraryMangas(manga.slice(0, 6))
-      setRecentlyRead(manga.slice(0, 4))
-    }).catch(() => {})
-  }, [])
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editForm, setEditForm] = useState({ username: '', bio: '' })
+  const [editLoading, setEditLoading] = useState(false)
 
   useEffect(() => {
     if (!user) return
-    apiGetBookmarks(user.id).then(bookmarks => {
-      if (bookmarks.length > 0) setFavoriteMangas(bookmarks)
+    setEditForm({ username: user.username, bio: user.bio || '' })
+    Promise.all([
+      apiGetBookmarks(user.id),
+      apiGetBookmarks(user.id),
+    ]).then(([bookmarks]) => {
+      setLibraryMangas(bookmarks)
+      setFavoriteMangas(bookmarks)
     }).catch(() => {})
   }, [user?.id])
+
+  const handleSaveProfile = async () => {
+    if (!user) return
+    setEditLoading(true)
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: editForm.username || undefined, bio: editForm.bio }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Xato')
+      if (data.user) {
+        updateUser({
+          username: data.user.username,
+          bio: data.user.bio,
+          avatar: data.user.avatar,
+        })
+      }
+      show('Profil yangilandi!', 'success')
+      setShowEditModal(false)
+    } catch (err: unknown) {
+      show(err instanceof Error ? err.message : 'Xato', 'error')
+    } finally {
+      setEditLoading(false)
+    }
+  }
 
   const formatTime = (minutes: number) => {
     const hours = Math.floor(minutes / 60)
@@ -193,6 +222,7 @@ export default function ProfilePage() {
                   </motion.button>
                 </Link>
                 <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowEditModal(true)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border/50 hover:bg-secondary/50 transition-colors text-sm font-medium">
                   <Edit2 className="w-4 h-4" />
                   <span className="hidden sm:inline">Tahrirlash</span>
@@ -309,13 +339,13 @@ export default function ProfilePage() {
                       <h2 className="font-bold flex items-center gap-2">
                         <BookMarked className="w-4 h-4 text-primary" />O'qishni davom ettirish
                       </h2>
-                      <Link href="/library" className="text-primary text-xs hover:underline flex items-center gap-1">
+                      <button onClick={() => setActiveTab('library')} className="text-primary text-xs hover:underline flex items-center gap-1">
                         Hammasi <ChevronRight className="w-3 h-3" />
-                      </Link>
+                      </button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      {recentlyRead.slice(0, 4).map((manga) => (
-                        <MangaCard key={manga.id} manga={manga} />
+                      {libraryMangas.slice(0, 4).map((m: import('@/lib/store').Manga) => (
+                        <MangaCard key={m.id} manga={m} />
                       ))}
                     </div>
                   </div>
@@ -349,9 +379,23 @@ export default function ProfilePage() {
             {/* LIBRARY */}
             {activeTab === 'library' && (
               <motion.div key="library" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {libraryMangas.map(manga => <MangaCard key={manga.id} manga={manga} />)}
-                </div>
+                {libraryMangas.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {libraryMangas.map(manga => <MangaCard key={manga.id} manga={manga} />)}
+                  </div>
+                ) : (
+                  <div className="text-center py-16">
+                    <motion.div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4"
+                      animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 2, repeat: Infinity }}>
+                      <BookOpen className="w-8 h-8 text-primary" />
+                    </motion.div>
+                    <h3 className="text-lg font-bold mb-2">Kutubxona bo&apos;sh</h3>
+                    <p className="text-muted-foreground text-sm mb-5">Manga saqlash uchun yurakcha tugmasini bosing</p>
+                    <Link href="/browse">
+                      <Button className="bg-gradient-to-r from-primary to-accent">Manga ko&apos;rish</Button>
+                    </Link>
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -504,6 +548,62 @@ export default function ProfilePage() {
       </main>
 
       <Footer />
+
+      {/* ── Edit Profile Modal ── */}
+      <AnimatePresence>
+        {showEditModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+            onClick={() => setShowEditModal(false)}>
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-sm glass-strong rounded-2xl p-6 border border-border/40"
+              onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold">Profilni tahrirlash</h2>
+                <button onClick={() => setShowEditModal(false)}
+                  className="p-1.5 rounded-lg hover:bg-secondary/50 transition-colors">
+                  <Settings className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Foydalanuvchi nomi</label>
+                  <input
+                    type="text"
+                    value={editForm.username}
+                    onChange={e => setEditForm(p => ({ ...p, username: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="Foydalanuvchi nomi"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Bio</label>
+                  <textarea
+                    value={editForm.bio}
+                    onChange={e => setEditForm(p => ({ ...p, bio: e.target.value }))}
+                    rows={3}
+                    className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                    placeholder="O'zingiz haqingizda..."
+                  />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => setShowEditModal(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-border/50 text-sm font-medium hover:bg-secondary/50 transition-colors">
+                    Bekor
+                  </button>
+                  <button onClick={handleSaveProfile} disabled={editLoading}
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-primary to-accent text-white text-sm font-bold disabled:opacity-60 transition-opacity flex items-center justify-center gap-2">
+                    {editLoading
+                      ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      : <Edit2 className="w-4 h-4" />}
+                    Saqlash
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
