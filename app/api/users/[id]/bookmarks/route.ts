@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (!manga_id) return apiError('manga_id talab qilinadi')
 
     const existing = await queryOne(
-      'SELECT id FROM bookmarks WHERE user_id=$1 AND manga_id=$2',
+      'SELECT user_id FROM bookmarks WHERE user_id=$1 AND manga_id=$2',
       [id, manga_id]
     )
 

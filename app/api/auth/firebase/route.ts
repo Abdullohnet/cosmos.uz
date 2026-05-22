@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
-import { query, queryOne } from '@/lib/db'
+import { queryOne } from '@/lib/db'
 import { signToken, apiError, apiSuccess } from '@/lib/auth'
 import { cookies } from 'next/headers'
+import bcrypt from 'bcryptjs'
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,27 +11,35 @@ export async function POST(req: NextRequest) {
     if (!uid || !email) return apiError('Firebase ma\'lumotlari to\'liq emas')
 
     const emailLower = email.toLowerCase()
+    const userAvatar = photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${emailLower}`
 
     let user = await queryOne<{ id: string; username: string; email: string; role: string; avatar: string }>(
-      'SELECT id, username, email, role, avatar FROM users WHERE google_id = $1 OR email = $2',
-      [uid, emailLower]
+      'SELECT id, username, email, role, avatar FROM users WHERE email = $1',
+      [emailLower]
     )
 
     if (!user) {
       const base = emailLower.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '')
-      const username = base + Math.floor(Math.random() * 9000 + 1000)
-      const avatar = photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
-      const rows = await query<{ id: string; username: string; email: string; role: string; avatar: string }>(
-        `INSERT INTO users (username, email, password_hash, google_id, avatar, role, subscription, diamonds, xp)
-         VALUES ($1, $2, '', $3, $4, 'user', 'free', 50, 0)
+      const username = (base || 'user') + Math.floor(Math.random() * 9000 + 1000)
+      const hash = await bcrypt.hash(uid + '_firebase_oauth', 10)
+      user = await queryOne<{ id: string; username: string; email: string; role: string; avatar: string }>(
+        `INSERT INTO users (username, email, password_hash, avatar, diamonds)
+         VALUES ($1, $2, $3, $4, 50)
+         ON CONFLICT (email) DO UPDATE SET avatar = COALESCE(NULLIF($4,''), users.avatar), updated_at = NOW()
          RETURNING id, username, email, role, avatar`,
-        [username, emailLower, uid, avatar]
+        [username, emailLower, hash, userAvatar]
       )
-      user = rows[0]
+      if (user) {
+        await queryOne(
+          `INSERT INTO notifications (user_id, type, title, message)
+           VALUES ($1, 'system', 'MangaUZ ga xush kelibsiz! 🎉', 'Firebase orqali kirganingiz uchun 50 ta olmos sovg\'a!')`,
+          [user.id]
+        ).catch(() => {})
+      }
     } else {
       await queryOne(
-        'UPDATE users SET google_id = $1, avatar = COALESCE(NULLIF($2,\'\'), avatar) WHERE id = $3',
-        [uid, photoURL || '', user.id]
+        'UPDATE users SET avatar = COALESCE(NULLIF($1,\'\'), avatar), updated_at = NOW() WHERE id = $2',
+        [userAvatar, user.id]
       )
     }
 

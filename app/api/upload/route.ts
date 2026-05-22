@@ -1,9 +1,23 @@
 import { NextRequest } from 'next/server'
 import { getAuthUser, apiError, apiSuccess } from '@/lib/auth'
-import { uploadToTelegram } from '@/lib/telegram-storage'
 
 const MAX_SIZE = 50 * 1024 * 1024
 const ALL_ALLOWED = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
+
+async function uploadToTelegramSafe(buffer: Buffer, filename: string, mimeType: string): Promise<string | null> {
+  const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
+  const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID_REAL || '-1003812463064'
+
+  if (!BOT_TOKEN || BOT_TOKEN.trim() === '') return null
+
+  try {
+    const { uploadToTelegram } = await import('@/lib/telegram-storage')
+    const tgFile = await uploadToTelegram(buffer, filename, mimeType)
+    return `/api/tg-file/${encodeURIComponent(tgFile.fileId)}`
+  } catch {
+    return null
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,16 +39,20 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    const tgFile = await uploadToTelegram(buffer, file.name, file.type)
-    const proxyUrl = `/api/tg-file/${encodeURIComponent(tgFile.fileId)}`
+    // Try Telegram first
+    const tgUrl = await uploadToTelegramSafe(buffer, file.name, file.type)
+    if (tgUrl) {
+      return apiSuccess({ url: tgUrl, name: file.name, size: file.size, type: file.type })
+    }
 
-    return apiSuccess({
-      url: proxyUrl,
-      fileId: tgFile.fileId,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    })
+    // Fallback: base64 data URL (for images only)
+    if (file.type.startsWith('image/')) {
+      const base64 = buffer.toString('base64')
+      const dataUrl = `data:${file.type};base64,${base64}`
+      return apiSuccess({ url: dataUrl, name: file.name, size: file.size, type: file.type })
+    }
+
+    return apiError('Telegram sozlanmagan. PDF yuklab bo\'lmaydi, faqat rasmlar qo\'llab-quvvatlanadi.')
   } catch (err) {
     console.error('Upload error:', err)
     const msg = err instanceof Error ? err.message : 'Server xatosi'

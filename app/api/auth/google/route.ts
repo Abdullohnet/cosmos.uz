@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
-import { query, queryOne } from '@/lib/db'
+import { queryOne } from '@/lib/db'
 import { signToken, apiError, apiSuccess } from '@/lib/auth'
 import { cookies } from 'next/headers'
+import bcrypt from 'bcryptjs'
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,22 +10,32 @@ export async function POST(req: NextRequest) {
 
     if (!googleId || !email) return apiError('Google ma\'lumotlari to\'liq emas')
 
-    let user = await queryOne<{ id: string; username: string; email: string; role: string }>(
-      'SELECT id, username, email, role FROM users WHERE google_id = $1 OR email = $2',
-      [googleId, email.toLowerCase()]
+    const emailLower = email.toLowerCase()
+
+    let user = await queryOne<{ id: string; username: string; email: string; role: string; avatar: string }>(
+      'SELECT id, username, email, role, avatar FROM users WHERE email = $1',
+      [emailLower]
     )
 
     if (!user) {
-      const username = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') + Math.floor(Math.random() * 1000)
-      const [newUser] = await query<{ id: string; username: string; email: string; role: string }>(
-        `INSERT INTO users (username, email, password_hash, google_id, avatar, role)
-         VALUES ($1, $2, '', $3, $4, 'user')
-         RETURNING id, username, email, role`,
-        [username, email.toLowerCase(), googleId, avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`]
+      const base = emailLower.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '')
+      const username = (base || 'user') + Math.floor(Math.random() * 9000 + 1000)
+      const hash = await bcrypt.hash(googleId + '_google_oauth', 10)
+      const userAvatar = avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
+      user = await queryOne<{ id: string; username: string; email: string; role: string; avatar: string }>(
+        `INSERT INTO users (username, email, password_hash, avatar, diamonds)
+         VALUES ($1, $2, $3, $4, 50)
+         ON CONFLICT (email) DO UPDATE SET updated_at = NOW()
+         RETURNING id, username, email, role, avatar`,
+        [username, emailLower, hash, userAvatar]
       )
-      user = newUser
-    } else if (!user) {
-      await queryOne('UPDATE users SET google_id = $1 WHERE email = $2', [googleId, email.toLowerCase()])
+      if (user) {
+        await queryOne(
+          `INSERT INTO notifications (user_id, type, title, message)
+           VALUES ($1, 'system', 'MangaUZ ga xush kelibsiz! 🎉', 'Google orqali kirganingiz uchun 50 ta olmos sovg\'a!')`,
+          [user.id]
+        ).catch(() => {})
+      }
     }
 
     if (!user) return apiError('Foydalanuvchi yaratilmadi', 500)
@@ -39,9 +50,9 @@ export async function POST(req: NextRequest) {
       path: '/',
     })
 
-    return apiSuccess({ user: { id: user.id, username: user.username, email: user.email, role: user.role } })
+    return apiSuccess({ user: { id: user.id, username: user.username, email: user.email, role: user.role, avatar: user.avatar } })
   } catch (err) {
-    console.error(err)
+    console.error('Google auth error:', err)
     return apiError('Server xatosi', 500)
   }
 }
