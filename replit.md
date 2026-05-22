@@ -30,10 +30,10 @@ MangaUZ — o'zbek tilida manhwa/manga o'qish uchun to'liq funksional veb-platfo
 - Tarjimon arizalarini tasdiqlash/rad etish
 - Sayt statistikasi
 
-## Demo akkauntlar
-- **Admin**: admin@mangauz.com / admin123
-- **Tarjimon**: translator@mangauz.com / demo1234
-- **Foydalanuvchi**: fan@mangauz.com / demo1234
+## Admin akkount
+- **Email**: saidabbos027@gmail.com
+- **Parol**: cosmos1226
+- **Rol**: admin (proplus)
 
 ## Muhim fayllar
 - `lib/db.ts` — PostgreSQL ulanish

@@ -6,7 +6,7 @@ export async function GET() {
   try {
     await requireRole('admin')
     const apps = await query(
-      'SELECT * FROM translator_applications ORDER BY created_at DESC'
+      'SELECT * FROM translator_applications ORDER BY submitted_at DESC'
     )
     return apiSuccess({ applications: apps })
   } catch (err: unknown) {
@@ -28,8 +28,10 @@ export async function PATCH(req: NextRequest) {
 
     const status = action === 'approve' ? 'approved' : 'rejected'
     await queryOne(
-      `UPDATE translator_applications SET status=$1, updated_at=NOW() WHERE id=$2`,
-      [status, id]
+      `UPDATE translator_applications
+       SET status=$1, reviewed_at=NOW(), review_note=$2
+       WHERE id=$3`,
+      [status, note ?? null, id]
     )
 
     const fullApp = await queryOne<{ full_name: string; email: string }>(
@@ -43,8 +45,8 @@ export async function PATCH(req: NextRequest) {
       if (existingUser) {
         await queryOne('UPDATE users SET role=$1 WHERE id=$2', ['translator', existingUser.id])
         await queryOne(
-          `INSERT INTO notifications (user_id, type, title, message, created_at)
-           VALUES ($1, 'system', $2, $3, NOW())`,
+          `INSERT INTO notifications (user_id, type, title, message)
+           VALUES ($1, 'system', $2, $3)`,
           [
             existingUser.id,
             'Tabriklaymiz! Tarjimon sifatida tasdiqlandingiz',
@@ -63,8 +65,8 @@ export async function PATCH(req: NextRequest) {
         )
         if (newUser) {
           await queryOne(
-            `INSERT INTO notifications (user_id, type, title, message, created_at)
-             VALUES ($1, 'system', $2, $3, NOW())`,
+            `INSERT INTO notifications (user_id, type, title, message)
+             VALUES ($1, 'system', $2, $3)`,
             [
               newUser.id,
               'Tabriklaymiz! Tarjimon sifatida tasdiqlandingiz',
@@ -81,8 +83,8 @@ export async function PATCH(req: NextRequest) {
       )
       if (existingUser) {
         await queryOne(
-          `INSERT INTO notifications (user_id, type, title, message, created_at)
-           VALUES ($1, 'system', $2, $3, NOW())`,
+          `INSERT INTO notifications (user_id, type, title, message)
+           VALUES ($1, 'system', $2, $3)`,
           [
             existingUser.id,
             'Tarjimon arizasi ko\'rib chiqildi',

@@ -151,127 +151,28 @@ export async function initDatabase() {
       );
     `)
 
-    // Seed demo users
+    // Create real admin account (saidabbos027@gmail.com / cosmos1226)
+    // Password hash for 'cosmos1226'
     await client.query(`
-      INSERT INTO users (id, username, email, password_hash, role, subscription, level, xp, xp_to_next_level, diamonds, avatar, bio, followers, following, chapters_read, time_spent, manga_completed)
-      VALUES
-        ('00000000-0000-0000-0000-000000000001', 'Admin_MangaUZ', 'admin@mangauz.com',
-         '$2b$12$Ssr25UKZh9OVdtN77ozgdeIfFANZquTKu6iUyte0RSp3SQ5IfqNKq',
-         'admin', 'proplus', 99, 9999, 10000, 99999,
-         'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin', 'Manga UZ platformasining bosh administratori.',
-         50000, 10, 10000, 500000, 500),
-        ('00000000-0000-0000-0000-000000000002', 'TeamSL_Translator', 'translator@mangauz.com',
-         '$2b$12$BHjdAYJZ4JeK2DrfToZrtevKg7glfEwVb/sMk5Hg.gxaGV1aLDTD6',
-         'translator', 'proplus', 45, 4200, 5000, 8500,
-         'https://api.dicebear.com/7.x/avataaars/svg?seed=Translator', 'O''zbek manga platformasining top tarjimoni.',
-         12500, 45, 5200, 120000, 234),
-        ('00000000-0000-0000-0000-000000000003', 'MangaFan2024', 'fan@mangauz.com',
-         '$2b$12$BHjdAYJZ4JeK2DrfToZrtevKg7glfEwVb/sMk5Hg.gxaGV1aLDTD6',
-         'user', 'pro', 24, 2450, 3000, 1250,
-         'https://api.dicebear.com/7.x/avataaars/svg?seed=Fan', 'Avid manga reader and collector.',
-         156, 89, 1847, 45600, 78)
-      ON CONFLICT (email) DO NOTHING;
-    `)
-
-    // Seed manga
-    await client.query(`
-      INSERT INTO manga (id, title, cover, description, author, artist, status, type, rating, views, bookmarks, chapters_count, is_featured, translator_id)
-      VALUES
-        ('10000000-0000-0000-0000-000000000001', 'Solo Leveling',
-         'https://images.unsplash.com/photo-1612178537253-bccd437b730e?w=300&h=400&fit=crop',
-         'In a world where hunters must battle deadly monsters to protect humanity, Sung Jin-Woo is the weakest of all hunters.',
-         'Chugong', 'Dubu', 'completed', 'manhwa', 4.9, 15000000, 890000, 179, true,
-         '00000000-0000-0000-0000-000000000002'),
-        ('10000000-0000-0000-0000-000000000002', 'Omniscient Reader',
-         'https://images.unsplash.com/photo-1618336753974-aae8e04506aa?w=300&h=400&fit=crop',
-         'Kim Dokja was an average office worker whose sole interest was reading his favorite web novel.',
-         'Sing Shong', 'Sleepy-C', 'ongoing', 'manhwa', 4.8, 12000000, 750000, 165, true,
-         '00000000-0000-0000-0000-000000000002'),
-        ('10000000-0000-0000-0000-000000000003', 'Tower of God',
-         'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=300&h=400&fit=crop',
-         'What do you desire? Fortune? Glory? Power? Revenge? Everything is at the top of the Tower.',
-         'SIU', 'SIU', 'ongoing', 'manhwa', 4.7, 20000000, 1200000, 580, false,
-         '00000000-0000-0000-0000-000000000002'),
-        ('10000000-0000-0000-0000-000000000004', 'The Beginning After The End',
-         'https://images.unsplash.com/photo-1614583224978-f05ce51ef5fa?w=300&h=400&fit=crop',
-         'King Grey has unrivaled strength and prestige in a world governed by martial ability.',
-         'TurtleMe', 'Fuyuki23', 'ongoing', 'manhwa', 4.9, 18000000, 950000, 190, true,
-         '00000000-0000-0000-0000-000000000002'),
-        ('10000000-0000-0000-0000-000000000005', 'Demon Slayer',
-         'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=300&h=400&fit=crop',
-         'Tanjiro sets out to become a demon slayer to avenge his family and cure his sister.',
-         'Koyoharu Gotouge', 'Koyoharu Gotouge', 'completed', 'manga', 4.8, 25000000, 1500000, 205, false,
-         '00000000-0000-0000-0000-000000000002'),
-        ('10000000-0000-0000-0000-000000000006', 'Jujutsu Kaisen',
-         'https://images.unsplash.com/photo-1601850494422-3cf14624b0b3?w=300&h=400&fit=crop',
-         'Yuji Itadori joins a secret organization of Jujutsu Sorcerers to eliminate a powerful Curse.',
-         'Gege Akutami', 'Gege Akutami', 'ongoing', 'manga', 4.7, 22000000, 1300000, 250, false,
-         '00000000-0000-0000-0000-000000000002')
-      ON CONFLICT DO NOTHING;
-    `)
-
-    // Seed manga genres
-    await client.query(`
-      INSERT INTO manga_genres (manga_id, genre) VALUES
-        ('10000000-0000-0000-0000-000000000001', 'Action'),
-        ('10000000-0000-0000-0000-000000000001', 'Fantasy'),
-        ('10000000-0000-0000-0000-000000000001', 'Adventure'),
-        ('10000000-0000-0000-0000-000000000002', 'Action'),
-        ('10000000-0000-0000-0000-000000000002', 'Fantasy'),
-        ('10000000-0000-0000-0000-000000000002', 'Drama'),
-        ('10000000-0000-0000-0000-000000000003', 'Action'),
-        ('10000000-0000-0000-0000-000000000003', 'Adventure'),
-        ('10000000-0000-0000-0000-000000000003', 'Mystery'),
-        ('10000000-0000-0000-0000-000000000004', 'Action'),
-        ('10000000-0000-0000-0000-000000000004', 'Fantasy'),
-        ('10000000-0000-0000-0000-000000000004', 'Romance'),
-        ('10000000-0000-0000-0000-000000000005', 'Action'),
-        ('10000000-0000-0000-0000-000000000005', 'Supernatural'),
-        ('10000000-0000-0000-0000-000000000005', 'Drama'),
-        ('10000000-0000-0000-0000-000000000006', 'Action'),
-        ('10000000-0000-0000-0000-000000000006', 'Supernatural'),
-        ('10000000-0000-0000-0000-000000000006', 'School')
-      ON CONFLICT DO NOTHING;
-    `)
-
-    // Seed chapters for Solo Leveling (sample 5 chapters)
-    await client.query(`
-      INSERT INTO chapters (id, manga_id, number, title, is_premium, views)
-      VALUES
-        ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 1, '1-bob: Dungeons paydo bo''ladi', false, 500000),
-        ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 2, '2-bob: Zaif ovchi', false, 450000),
-        ('20000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', 3, '3-bob: Tizim', false, 420000),
-        ('20000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', 4, '4-bob: Ovchi sinflar', false, 400000),
-        ('20000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000001', 5, '5-bob: Birinchi vazifa', false, 380000)
-      ON CONFLICT DO NOTHING;
-    `)
-
-    // Seed chapter pages for chapter 1 (Solo Leveling)
-    await client.query(`
-      INSERT INTO chapter_pages (chapter_id, page_number, image_url)
-      VALUES
-        ('20000000-0000-0000-0000-000000000001', 1, 'https://images.unsplash.com/photo-1612178537253-bccd437b730e?w=800&h=1200&fit=crop'),
-        ('20000000-0000-0000-0000-000000000001', 2, 'https://images.unsplash.com/photo-1618336753974-aae8e04506aa?w=800&h=1200&fit=crop'),
-        ('20000000-0000-0000-0000-000000000001', 3, 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&h=1200&fit=crop'),
-        ('20000000-0000-0000-0000-000000000001', 4, 'https://images.unsplash.com/photo-1614583224978-f05ce51ef5fa?w=800&h=1200&fit=crop'),
-        ('20000000-0000-0000-0000-000000000001', 5, 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&h=1200&fit=crop'),
-        ('20000000-0000-0000-0000-000000000001', 6, 'https://images.unsplash.com/photo-1601850494422-3cf14624b0b3?w=800&h=1200&fit=crop'),
-        ('20000000-0000-0000-0000-000000000001', 7, 'https://images.unsplash.com/photo-1624213111452-35e8d3d5cc18?w=800&h=1200&fit=crop'),
-        ('20000000-0000-0000-0000-000000000001', 8, 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=800&h=1200&fit=crop')
-      ON CONFLICT DO NOTHING;
-    `)
-
-    // Seed sample comments
-    await client.query(`
-      INSERT INTO comments (manga_id, user_id, content, likes_count)
-      VALUES
-        ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003',
-         'Bu manga juda zo''r! Har bir bob yangi hayajon olib keladi 🔥', 42),
-        ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002',
-         'Tarjimon ajoyib ish qilmoqda, sifat zo''r 👏', 28),
-        ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000003',
-         'Omniscient Reader eng yaxshi manhwa! 🌟', 35)
-      ON CONFLICT DO NOTHING;
+      INSERT INTO users (username, email, password_hash, role, subscription, level, xp, xp_to_next_level, diamonds, avatar, bio)
+      VALUES (
+        'Admin_MangaUZ',
+        'saidabbos027@gmail.com',
+        '$2b$12$G2mKP3cuU/OSgdLmv6ZOk.kuyfTRuW6S8b1X8TblWMbpcQcT6HVTC',
+        'admin',
+        'proplus',
+        99,
+        9999,
+        10000,
+        99999,
+        'https://api.dicebear.com/7.x/avataaars/svg?seed=AdminMangaUZ',
+        'MangaUZ platformasining bosh administratori.'
+      )
+      ON CONFLICT (email) DO UPDATE SET
+        role = 'admin',
+        subscription = 'proplus',
+        password_hash = '$2b$12$G2mKP3cuU/OSgdLmv6ZOk.kuyfTRuW6S8b1X8TblWMbpcQcT6HVTC',
+        updated_at = NOW();
     `)
 
     console.log('✅ Database initialized successfully')
