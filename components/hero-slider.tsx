@@ -19,6 +19,17 @@ export function HeroSlider({ mangas }: HeroSliderProps) {
 
   const featuredMangas = mangas.slice(0, 5)
 
+  useEffect(() => {
+    if (featuredMangas.length === 0) return
+    intervalRef.current = setInterval(() => {
+      setDirection(1)
+      setCurrentIndex((prev) => (prev + 1) % featuredMangas.length)
+    }, 6000)
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [featuredMangas.length])
+
   if (featuredMangas.length === 0) {
     return (
       <div className="relative w-full h-[40vh] sm:h-[50vh] flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 border-b border-border/20">
@@ -31,17 +42,6 @@ export function HeroSlider({ mangas }: HeroSliderProps) {
       </div>
     )
   }
-
-  useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setDirection(1)
-      setCurrentIndex((prev) => (prev + 1) % featuredMangas.length)
-    }, 6000)
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [featuredMangas.length])
 
   const goToSlide = (index: number) => {
     setDirection(index > currentIndex ? 1 : -1)

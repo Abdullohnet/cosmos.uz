@@ -52,6 +52,9 @@ export default function TranslatorDashboard() {
   const [mangaError, setMangaError] = useState('')
   const [mangaForm, setMangaForm] = useState({ title: '', author: '', artist: '', description: '', type: 'manhwa', status: 'ongoing', cover: '' })
   const [mangaLoading, setMangaLoading] = useState(false)
+  const [coverUploading, setCoverUploading] = useState(false)
+  const [coverPreview, setCoverPreview] = useState('')
+  const coverRef = useRef<HTMLInputElement>(null)
   const [chapterError, setChapterError] = useState('')
   const [selectedMangaId, setSelectedMangaId] = useState('')
 
@@ -63,6 +66,24 @@ export default function TranslatorDashboard() {
   }
 
   useEffect(() => { loadMangas() }, [])
+
+  const handleCoverUpload = async (file: File) => {
+    setCoverUploading(true)
+    setCoverPreview(URL.createObjectURL(file))
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Xato')
+      setMangaForm(p => ({ ...p, cover: data.url }))
+    } catch (err: unknown) {
+      setCoverPreview('')
+      setMangaError(err instanceof Error ? err.message : 'Muqova yuklashda xato')
+    } finally {
+      setCoverUploading(false)
+    }
+  }
 
   const handleCreateManga = async () => {
     if (!mangaForm.title) { setMangaError('Manga nomi kiritilishi shart'); return }
@@ -85,6 +106,7 @@ export default function TranslatorDashboard() {
       if (!res.ok) throw new Error(data.error || 'Xato')
       setShowMangaModal(false)
       setMangaForm({ title: '', author: '', artist: '', description: '', type: 'manhwa', status: 'ongoing', cover: '' })
+      setCoverPreview('')
       loadMangas()
     } catch (err: unknown) {
       setMangaError(err instanceof Error ? err.message : 'Xato yuz berdi')
@@ -128,7 +150,7 @@ export default function TranslatorDashboard() {
 
   const pdfToImages = async (file: File, onProgress: (p: number) => void): Promise<string[]> => {
     const pdfjsLib = await import('pdfjs-dist')
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
 
     const arrayBuffer = await file.arrayBuffer()
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
@@ -137,13 +159,13 @@ export default function TranslatorDashboard() {
 
     for (let i = 1; i <= totalPages; i++) {
       const page = await pdf.getPage(i)
-      const viewport = page.getViewport({ scale: 1.5 })
+      const viewport = page.getViewport({ scale: 2.0 })
       const canvas = document.createElement('canvas')
       canvas.width = viewport.width
       canvas.height = viewport.height
       const ctx = canvas.getContext('2d')!
-      await page.render({ canvasContext: ctx, canvas, viewport } as any).promise
-      images.push(canvas.toDataURL('image/jpeg', 0.85))
+      await (page.render({ canvasContext: ctx, viewport } as any)).promise
+      images.push(canvas.toDataURL('image/jpeg', 0.90))
       onProgress(Math.round((i / totalPages) * 80))
     }
     return images
@@ -170,8 +192,9 @@ export default function TranslatorDashboard() {
       } else if (uploadMode === 'pdf' && pdfFile) {
         try {
           pages = await pdfToImages(pdfFile, setUploadProgress)
-        } catch {
-          throw new Error('PDF ni o\'qishda xato. Fayl buzilgan bo\'lishi mumkin.')
+        } catch (pdfErr: unknown) {
+          const msg = pdfErr instanceof Error ? pdfErr.message : 'Noma\'lum xato'
+          throw new Error(`PDF xatosi: ${msg}`)
         }
       }
 
@@ -515,12 +538,12 @@ export default function TranslatorDashboard() {
         {showMangaModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
-            onClick={() => setShowMangaModal(false)}>
+            onClick={() => { setShowMangaModal(false); setCoverPreview('') }}>
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               className="w-full max-w-md glass-strong rounded-2xl p-6" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-lg font-bold">Yangi Manga Qo'shish</h2>
-                <button onClick={() => setShowMangaModal(false)} className="p-1.5 rounded-lg hover:bg-secondary/50"><X className="w-5 h-5" /></button>
+                <button onClick={() => { setShowMangaModal(false); setCoverPreview('') }} className="p-1.5 rounded-lg hover:bg-secondary/50"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-4">
                 <div>
@@ -538,8 +561,45 @@ export default function TranslatorDashboard() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Muqova URL (ixtiyoriy)</label>
-                  <input type="url" placeholder="https://..." value={mangaForm.cover} onChange={e => setMangaForm(p => ({...p, cover: e.target.value}))} className="w-full px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Muqova rasmi</label>
+                  <input ref={coverRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleCoverUpload(f) }} />
+                  <div
+                    onClick={() => coverRef.current?.click()}
+                    className={cn(
+                      'relative w-full h-32 rounded-xl border-2 border-dashed cursor-pointer transition-colors flex items-center justify-center overflow-hidden',
+                      coverPreview ? 'border-primary/50' : 'border-border/50 hover:border-primary/40'
+                    )}
+                  >
+                    {coverPreview ? (
+                      <>
+                        <img src={coverPreview} alt="cover" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-background/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                          <p className="text-xs font-medium text-white">O&apos;zgartirish</p>
+                        </div>
+                        {coverUploading && (
+                          <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
+                            <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                          </div>
+                        )}
+                        {mangaForm.cover && !coverUploading && (
+                          <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-success flex items-center justify-center">
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center p-3">
+                        {coverUploading ? (
+                          <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-2" />
+                        ) : (
+                          <Image className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                        )}
+                        <p className="text-xs text-muted-foreground">{coverUploading ? 'Yuklanmoqda...' : 'Rasm tanlash uchun bosing'}</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">JPG, PNG, WEBP</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Tavsif</label>
