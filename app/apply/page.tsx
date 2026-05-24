@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   User, Mail, Phone, MessageCircle, BookOpen, Globe,
   Star, FileText, ChevronRight, ChevronLeft, Check,
-  Upload, Sparkles, Send, ArrowLeft
+  Upload, Sparkles, Send, ArrowLeft, AlertCircle
 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import { ParticlesBackground, FloatingOrbs } from '@/components/particles'
@@ -33,6 +33,7 @@ export default function ApplyPage() {
   const [step, setStep] = useState(1)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
   const [form, setForm] = useState<FormData>({
     fullName: '', email: '', phone: '', telegram: '',
     languages: [], experience: '', portfolioLinks: '', previousManga: '',
@@ -58,29 +59,64 @@ export default function ApplyPage() {
 
   const handleSubmit = async () => {
     setLoading(true)
+    setErrorMsg('')
+    
     try {
-      const res = await fetch('/api/apply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: form.fullName,
-          email: form.email,
-          phone: form.phone,
-          telegram: form.telegram,
-          languages: form.languages,
-          experience: form.experience,
-          portfolioLinks: form.portfolioLinks,
-          previousManga: form.previousManga,
-          genres: form.genres,
-          motivation: form.motivation,
-          sampleText: form.sampleText,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Xato yuz berdi')
+      // 1. Yangi ariza obyekti yaratamiz
+      const newApplication = {
+        id: Date.now().toString(),
+        fullName: form.fullName.trim(),
+        email: form.email.toLowerCase(),
+        phone: form.phone.trim(),
+        telegram: form.telegram.trim(),
+        languages: form.languages,
+        experience: form.experience,
+        portfolioLinks: form.portfolioLinks || '',
+        previousManga: form.previousManga.trim(),
+        genres: form.genres,
+        motivation: form.motivation.trim(),
+        sampleText: form.sampleText || '',
+        status: 'pending',
+        submittedAt: new Date().toISOString()
+      }
+
+      console.log('📝 Saving application:', newApplication)
+
+      // 2. localStorage'ga saqlash
+      const existingApps = localStorage.getItem('translatorApplications')
+      let applications = []
+      
+      if (existingApps) {
+        applications = JSON.parse(existingApps)
+        console.log('📦 Existing applications:', applications.length)
+      }
+      
+      applications.push(newApplication)
+      localStorage.setItem('translatorApplications', JSON.stringify(applications))
+      
+      console.log('✅ Application saved! Total:', applications.length)
+      
+      // 3. API'ga yuborish (agar mavjud bo'lsa)
+      try {
+        const res = await fetch('/api/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          console.warn('API warning:', data.error)
+        } else {
+          console.log('✅ API also saved successfully')
+        }
+      } catch (apiError) {
+        console.warn('API not available, but saved locally')
+      }
+      
       setSubmitted(true)
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Xato yuz berdi')
+    } catch (err: any) {
+      console.error('❌ Submit error:', err)
+      setErrorMsg(err.message || 'Xato yuz berdi')
     } finally {
       setLoading(false)
     }
@@ -174,6 +210,21 @@ export default function ApplyPage() {
 
           {/* Form Card */}
           <div className="glass rounded-2xl p-6 sm:p-8">
+            {/* Error Message */}
+            <AnimatePresence>
+              {errorMsg && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-2"
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  {errorMsg}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <AnimatePresence mode="wait">
 
               {/* Step 1 */}

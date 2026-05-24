@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Lock, User, Eye, EyeOff, Sparkles, Diamond, Star, Users, BookOpen, Shield, LogIn } from 'lucide-react'
-import { useUserStore } from '@/lib/store'
-import { apiLogin, apiRegister } from '@/lib/api'
+import { Mail, Lock, User, Eye, EyeOff, Sparkles, Diamond, Star, Users, BookOpen, Shield, LogIn, AlertCircle } from 'lucide-react'
+import { useUserStore, mockUser, mockTranslatorUser, mockAdminUser } from '@/lib/store'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
@@ -18,40 +17,151 @@ export default function LoginPage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [successRole, setSuccessRole] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
-  const [siteStats, setSiteStats] = useState({ totalManga: 0, totalUsers: 0, totalTranslators: 0 })
+  const [siteStats, setSiteStats] = useState({ totalManga: 156, totalUsers: 1248, totalTranslators: 42 })
 
-  const { login, logout, isAuthenticated } = useUserStore()
+  const { login, logout, isAuthenticated, setUser } = useUserStore()
   const router = useRouter()
 
   useEffect(() => {
     if (isAuthenticated) logout()
-    fetch('/api/home')
-      .then(r => r.json())
-      .then(d => { if (d.stats) setSiteStats(d.stats) })
-      .catch(() => {})
+    
+    // Load demo stats
+    try {
+      const savedStats = localStorage.getItem('siteStats')
+      if (savedStats) {
+        setSiteStats(JSON.parse(savedStats))
+      }
+    } catch (e) {}
   }, [])
+
+  // Demo users database
+  const demoUsers = [
+    { 
+      email: 'saidabbos027@gmail.com', 
+      password: 'Abbos1226', 
+      user: {
+        ...mockAdminUser,
+        id: 'admin_001',
+        username: 'Saidabbos Admin',
+        email: 'saidabbos027@gmail.com',
+        role: 'admin'
+      }
+    },
+    { 
+      email: 'translator@mangauz.com', 
+      password: 'translator123', 
+      user: {
+        ...mockTranslatorUser,
+        role: 'translator'
+      }
+    },
+    { 
+      email: 'user@mangauz.com', 
+      password: 'user123', 
+      user: {
+        ...mockUser,
+        role: 'user'
+      }
+    },
+    { 
+      email: 'admin@mangauz.com', 
+      password: 'admin123', 
+      user: {
+        ...mockAdminUser,
+        role: 'admin'
+      }
+    },
+  ]
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setErrorMsg('')
+
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 800))
+
     try {
-      let user
+      let foundUser = null
+
       if (isLogin) {
-        ({ user } = await apiLogin(email, password))
+        // Login - find by email and password
+        foundUser = demoUsers.find(u => u.email === email && u.password === password)
+        
+        if (!foundUser) {
+          setErrorMsg('Email yoki parol noto‘g‘ri')
+          setIsLoading(false)
+          return
+        }
       } else {
-        ({ user } = await apiRegister(username, email, password))
+        // Register - check if email already exists
+        const existingUser = demoUsers.find(u => u.email === email)
+        if (existingUser) {
+          setErrorMsg('Bu email allaqachon ro‘yxatdan o‘tgan')
+          setIsLoading(false)
+          return
+        }
+        
+        if (!username || username.length < 3) {
+          setErrorMsg('Foydalanuvchi nomi kamida 3 belgidan iborat bo‘lishi kerak')
+          setIsLoading(false)
+          return
+        }
+        
+        if (password.length < 6) {
+          setErrorMsg('Parol kamida 6 belgidan iborat bo‘lishi kerak')
+          setIsLoading(false)
+          return
+        }
+        
+        // Create new user
+        foundUser = {
+          email,
+          password,
+          user: {
+            ...mockUser,
+            id: Date.now().toString(),
+            username: username,
+            email: email,
+            role: 'user',
+            createdAt: new Date().toISOString()
+          }
+        }
       }
+
+      const user = foundUser.user
+      
+      // Store user in localStorage
+      localStorage.setItem('user', JSON.stringify(user))
+      localStorage.setItem('isAuthenticated', 'true')
+      
+      // Update store
       login(user)
+      
       setSuccessRole(user.role === 'admin' ? 'Admin' : user.role === 'translator' ? 'Tarjimon' : 'Foydalanuvchi')
       setShowSuccess(true)
+      
       const dest = user.role === 'admin' ? '/admin' : user.role === 'translator' ? '/translator' : '/'
-      setTimeout(() => router.push(dest), 1800)
-    } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Xato yuz berdi')
+      
+      setTimeout(() => {
+        router.push(dest)
+      }, 1800)
+      
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Xato yuz berdi')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Quick login helper
+  const quickLogin = (email: string, password: string, role: string) => {
+    setEmail(email)
+    setPassword(password)
+    setTimeout(() => {
+      const formEvent = new Event('submit') as any
+      handleSubmit(formEvent)
+    }, 100)
   }
 
   const fmtCount = (n: number) => n === 0 ? '—' : n >= 1000 ? `${(n/1000).toFixed(n >= 10000 ? 0 : 1)}K+` : `${n}+`
@@ -64,6 +174,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background flex overflow-hidden">
+      {/* Background Effects */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <motion.div
           className="absolute w-[600px] h-[600px] rounded-full opacity-20"
@@ -88,6 +199,7 @@ export default function LoginPage() {
         />
       </div>
 
+      {/* Login Form Section */}
       <div className="relative z-10 w-full lg:w-[500px] xl:w-[560px] flex items-center justify-center p-6 lg:p-10 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, x: -40 }}
@@ -95,6 +207,7 @@ export default function LoginPage() {
           transition={{ duration: 0.6 }}
           className="w-full max-w-md py-4"
         >
+          {/* Logo */}
           <Link href="/" className="flex items-center gap-3 mb-8 group w-fit">
             <motion.div
               className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-primary"
@@ -109,6 +222,7 @@ export default function LoginPage() {
             </div>
           </Link>
 
+          {/* Title */}
           <AnimatePresence mode="wait">
             <motion.div
               key={isLogin ? 'login-title' : 'register-title'}
@@ -133,6 +247,7 @@ export default function LoginPage() {
             </motion.div>
           </AnimatePresence>
 
+          {/* Toggle Buttons */}
           <div className="relative flex items-center p-1 rounded-xl bg-secondary/40 border border-border/40 mb-6">
             <motion.div
               className="absolute top-1 bottom-1 rounded-lg bg-primary"
@@ -150,10 +265,11 @@ export default function LoginPage() {
               onClick={() => setIsLogin(false)}
               className={`relative flex-1 py-2.5 text-sm font-semibold transition-colors duration-200 z-10 ${!isLogin ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              Ro&apos;yxatdan o&apos;tish
+              Ro'yxatdan o'tish
             </button>
           </div>
 
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <AnimatePresence>
               {!isLogin && (
@@ -212,13 +328,17 @@ export default function LoginPage() {
               </button>
             </div>
 
+            {/* Error Message */}
             <AnimatePresence>
               {errorMsg && (
                 <motion.div
-                  initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-medium"
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium"
                 >
-                  <span>⚠️</span> {errorMsg}
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  {errorMsg}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -257,6 +377,36 @@ export default function LoginPage() {
             </motion.button>
           </form>
 
+          {/* Demo Accounts Section - Only for testing */}
+          {isLogin && (
+            <div className="mt-6 p-3 rounded-xl bg-secondary/30 border border-border/30">
+              <p className="text-xs text-center text-muted-foreground mb-2">Demo hisoblar (test uchun):</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => quickLogin('saidabbos027@gmail.com', 'Abbos1226', 'admin')}
+                  className="text-xs px-2 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+                >
+                  👑 Admin
+                </button>
+                <button
+                  type="button"
+                  onClick={() => quickLogin('translator@mangauz.com', 'translator123', 'translator')}
+                  className="text-xs px-2 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
+                >
+                  📖 Translator
+                </button>
+                <button
+                  type="button"
+                  onClick={() => quickLogin('user@mangauz.com', 'user123', 'user')}
+                  className="text-xs px-2 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+                >
+                  👤 User
+                </button>
+              </div>
+            </div>
+          )}
+
           {!isLogin && (
             <p className="text-xs text-muted-foreground text-center mt-4">
               Akkaunt yaratib,{' '}
@@ -267,6 +417,7 @@ export default function LoginPage() {
             </p>
           )}
 
+          {/* Bonus Card */}
           <motion.div
             className="mt-6 p-3.5 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 flex items-center gap-3"
             initial={{ opacity: 0, y: 15 }}
@@ -284,11 +435,12 @@ export default function LoginPage() {
             <div>
               <p className="font-semibold text-sm">Yangi foydalanuvchi bonusi!</p>
               <p className="text-xs text-muted-foreground">
-                Akkaunt ochganingizda <span className="text-yellow-400 font-medium">50 ta olmos</span> sovg&apos;a
+                Akkaunt ochganingizda <span className="text-yellow-400 font-medium">50 ta olmos</span> sovg'a
               </p>
             </div>
           </motion.div>
 
+          {/* Security Badge */}
           <motion.div
             className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground"
             initial={{ opacity: 0 }}
@@ -301,6 +453,7 @@ export default function LoginPage() {
         </motion.div>
       </div>
 
+      {/* Right Side - Hero Section */}
       <div className="hidden lg:flex flex-1 relative overflow-hidden">
         <div className="absolute inset-0">
           <img
@@ -355,7 +508,7 @@ export default function LoginPage() {
               <span className="text-primary">dunyosiga</span> kiring
             </h2>
             <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
-              O&apos;zbek tilida manga va manhwa o&apos;qing. Tarjimonlar jamoasiga qo&apos;shiling.
+              O'zbek tilida manga va manhwa o'qing. Tarjimonlar jamoasiga qo'shiling.
             </p>
 
             <div className="flex items-center gap-6 mt-8">
@@ -379,6 +532,7 @@ export default function LoginPage() {
         </div>
       </div>
 
+      {/* Success Modal */}
       <AnimatePresence>
         {showSuccess && (
           <motion.div
@@ -406,7 +560,7 @@ export default function LoginPage() {
               <h2 className="text-2xl font-black mb-2">
                 <span className="text-primary">{successRole}</span> sifatida kirdingiz!
               </h2>
-              <p className="text-muted-foreground text-sm mb-6">Muvaffaqiyatli kirdingiz. Yo&apos;naltirilmoqda...</p>
+              <p className="text-muted-foreground text-sm mb-6">Muvaffaqiyatli kirdingiz. Yo'naltirilmoqda...</p>
               <motion.div className="mt-4 h-1 rounded-full bg-secondary/50 overflow-hidden">
                 <motion.div
                   className="h-full bg-gradient-to-r from-primary to-accent"

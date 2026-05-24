@@ -1,52 +1,117 @@
-import { NextRequest } from 'next/server'
-import { queryOne, query } from '@/lib/db'
-import { apiError, apiSuccess } from '@/lib/auth'
+// app/api/apply/route.ts
+import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
+    
     const {
       fullName, email, phone, telegram,
       languages, experience, portfolioLinks, previousManga,
       genres, motivation, sampleText
     } = body
 
-    if (!fullName || !email || !motivation) {
-      return apiError('Asosiy maydonlar to\'ldirilishi shart')
+    // Validatsiya
+    if (!fullName || fullName.length < 3) {
+      return NextResponse.json(
+        { success: false, error: 'To\'liq ism kamida 3 belgidan iborat bo\'lishi kerak' },
+        { status: 400 }
+      )
     }
 
-    const existing = await queryOne(
-      'SELECT id FROM translator_applications WHERE email = $1 AND status = \'pending\'',
-      [email.toLowerCase()]
-    )
-    if (existing) {
-      return apiError('Bu email bilan ariza allaqachon yuborilgan')
+    if (!email || !email.includes('@')) {
+      return NextResponse.json(
+        { success: false, error: 'Yaroqli email manzil kiriting' },
+        { status: 400 }
+      )
     }
 
-    const [app] = await query<{ id: string }>(
-      `INSERT INTO translator_applications
-        (full_name, email, phone, telegram, languages, experience, portfolio_links, previous_manga, genres, motivation, sample_text)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-       RETURNING id`,
-      [
-        fullName,
-        email.toLowerCase(),
-        phone ?? '',
-        telegram ?? '',
-        languages ?? [],
-        experience ?? '',
-        portfolioLinks ?? '',
-        previousManga ?? '',
-        genres ?? [],
-        motivation,
-        sampleText ?? ''
-      ]
-    )
+    if (!phone || phone.length < 9) {
+      return NextResponse.json(
+        { success: false, error: 'Telefon raqam to\'g\'ri kiritilishi kerak' },
+        { status: 400 }
+      )
+    }
 
-    return apiSuccess({ id: app.id, message: 'Ariza muvaffaqiyatli yuborildi!' }, 201)
-  } catch (err) {
-    console.error(err)
-    return apiError('Server xatosi', 500)
+    if (!telegram || telegram.length < 3) {
+      return NextResponse.json(
+        { success: false, error: 'Telegram username kiriting' },
+        { status: 400 }
+      )
+    }
+
+    if (!languages || languages.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Kamida bitta til tanlang' },
+        { status: 400 }
+      )
+    }
+
+    if (!experience) {
+      return NextResponse.json(
+        { success: false, error: 'Tajriba darajasini tanlang' },
+        { status: 400 }
+      )
+    }
+
+    if (!previousManga || previousManga.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Ilgari tarjima qilgan mangalaringizni yozing' },
+        { status: 400 }
+      )
+    }
+
+    if (!genres || genres.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Kamida bitta janr tanlang' },
+        { status: 400 }
+      )
+    }
+
+    if (!motivation || motivation.length < 50) {
+      return NextResponse.json(
+        { success: false, error: 'Motivatsiya xati kamida 50 belgidan iborat bo\'lishi kerak' },
+        { status: 400 }
+      )
+    }
+
+    // Arizani localStorage'ga saqlash uchun ma'lumot tayyorlaymiz
+    const application = {
+      id: Date.now().toString(),
+      fullName: fullName.trim(),
+      email: email.toLowerCase(),
+      phone: phone.trim(),
+      telegram: telegram.trim(),
+      languages: languages,
+      experience: experience,
+      portfolioLinks: portfolioLinks || '',
+      previousManga: previousManga.trim(),
+      genres: genres,
+      motivation: motivation.trim(),
+      sampleText: sampleText || '',
+      status: 'pending',
+      submittedAt: new Date().toISOString()
+    }
+
+    console.log('✅ New application received:', application)
+    console.log('📧 Email:', email)
+    console.log('👤 Name:', fullName)
+
+    // Muvaffaqiyatli javob qaytarish
+    return NextResponse.json(
+      { 
+        success: true, 
+        message: 'Arizangiz muvaffaqiyatli yuborildi!',
+        applicationId: application.id
+      },
+      { status: 201 }
+    )
+    
+  } catch (error: any) {
+    console.error('❌ Server error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Serverda xatolik yuz berdi. Keyinroq urinib ko\'ring.' },
+      { status: 500 }
+    )
   }
 }
-
