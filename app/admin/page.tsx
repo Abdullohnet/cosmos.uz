@@ -242,7 +242,7 @@ export default function AdminPanel() {
             <p className="text-xs text-muted-foreground">Manga UZ boshqaruv tizimi</p>
           </div>
           <div className="space-y-4">
-            <input type="email" className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border/50" placeholder="saidabbos027@gmail.com" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+            <input type="email" className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border/50" placeholder="Email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} />
             <input type="password" className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border/50" placeholder="Parol" value={loginPass} onChange={e => setLoginPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} />
             {authError && <p className="text-red-400 text-xs flex items-center gap-1 bg-red-500/10 p-2 rounded-lg"><AlertCircle className="w-3.5 h-3.5" />{authError}</p>}
             <Button className="w-full py-2.5" disabled={isLogging} onClick={handleLogin}>{isLogging ? <RefreshCw className="w-4 h-4 animate-spin mx-auto" /> : 'Kirish'}</Button>
