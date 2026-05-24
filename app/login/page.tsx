@@ -24,14 +24,6 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) logout()
-    
-    // Load demo stats
-    try {
-      const savedStats = localStorage.getItem('siteStats')
-      if (savedStats) {
-        setSiteStats(JSON.parse(savedStats))
-      }
-    } catch (e) {}
   }, [])
 
   // Demo users database
@@ -63,14 +55,6 @@ export default function LoginPage() {
         role: 'user'
       }
     },
-    { 
-      email: 'admin@mangauz.com', 
-      password: 'admin123', 
-      user: {
-        ...mockAdminUser,
-        role: 'admin'
-      }
-    },
   ]
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,14 +62,12 @@ export default function LoginPage() {
     setIsLoading(true)
     setErrorMsg('')
 
-    // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 800))
 
     try {
       let foundUser = null
 
       if (isLogin) {
-        // Login - find by email and password
         foundUser = demoUsers.find(u => u.email === email && u.password === password)
         
         if (!foundUser) {
@@ -94,7 +76,6 @@ export default function LoginPage() {
           return
         }
       } else {
-        // Register - check if email already exists
         const existingUser = demoUsers.find(u => u.email === email)
         if (existingUser) {
           setErrorMsg('Bu email allaqachon ro‘yxatdan o‘tgan')
@@ -114,7 +95,6 @@ export default function LoginPage() {
           return
         }
         
-        // Create new user
         foundUser = {
           email,
           password,
@@ -131,11 +111,9 @@ export default function LoginPage() {
 
       const user = foundUser.user
       
-      // Store user in localStorage
       localStorage.setItem('user', JSON.stringify(user))
       localStorage.setItem('isAuthenticated', 'true')
       
-      // Update store
       login(user)
       
       setSuccessRole(user.role === 'admin' ? 'Admin' : user.role === 'translator' ? 'Tarjimon' : 'Foydalanuvchi')
@@ -154,16 +132,6 @@ export default function LoginPage() {
     }
   }
 
-  // Quick login helper
-  const quickLogin = (email: string, password: string, role: string) => {
-    setEmail(email)
-    setPassword(password)
-    setTimeout(() => {
-      const formEvent = new Event('submit') as any
-      handleSubmit(formEvent)
-    }, 100)
-  }
-
   const fmtCount = (n: number) => n === 0 ? '—' : n >= 1000 ? `${(n/1000).toFixed(n >= 10000 ? 0 : 1)}K+` : `${n}+`
 
   const stats = [
@@ -174,7 +142,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background flex overflow-hidden">
-      {/* Background Effects */}
+      {/* Background Effects - same as before */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <motion.div
           className="absolute w-[600px] h-[600px] rounded-full opacity-20"
@@ -376,36 +344,6 @@ export default function LoginPage() {
               )}
             </motion.button>
           </form>
-
-          {/* Demo Accounts Section - Only for testing */}
-          {isLogin && (
-            <div className="mt-6 p-3 rounded-xl bg-secondary/30 border border-border/30">
-              <p className="text-xs text-center text-muted-foreground mb-2">Demo hisoblar (test uchun):</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => quickLogin('saidabbos027@gmail.com', 'Abbos1226', 'admin')}
-                  className="text-xs px-2 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
-                >
-                  👑 Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => quickLogin('translator@mangauz.com', 'translator123', 'translator')}
-                  className="text-xs px-2 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
-                >
-                  📖 Translator
-                </button>
-                <button
-                  type="button"
-                  onClick={() => quickLogin('user@mangauz.com', 'user123', 'user')}
-                  className="text-xs px-2 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
-                >
-                  👤 User
-                </button>
-              </div>
-            </div>
-          )}
 
           {!isLogin && (
             <p className="text-xs text-muted-foreground text-center mt-4">
